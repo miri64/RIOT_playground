@@ -75,6 +75,7 @@ static void *thread2(void *args)
     while (1) {
         msg_receive(&msg_req);
 
+        printf("Increment counters\n");
         (*(((test_struct_t *)msg_req.content.ptr)->a))++;
         (*(((test_struct_t *)msg_resp.content.ptr)->a))++;
 
@@ -86,9 +87,9 @@ static void *thread2(void *args)
 
 int main(void)
 {
-    thread1_pid = thread_create(thread1_stack, THREAD1_STACKSIZE, PRIORITY_MAIN - 1,
-                                0, thread1, NULL, "thread1");
     thread2_pid = thread_create(thread2_stack, THREAD2_STACKSIZE, PRIORITY_MAIN - 1,
                                 0, thread2, NULL, "thread2");
+    thread1_pid = thread_create(thread1_stack, THREAD1_STACKSIZE, PRIORITY_MAIN - 1,
+                                0, thread1, NULL, "thread1");
     return 0;
 }

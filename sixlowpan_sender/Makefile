@@ -21,6 +21,7 @@ CFLAGS += -DDEVELHELP
 USEMODULE += basic_mac
 USEMODULE += nativenet
 USEMODULE += net_help
+USEMODULE += random
 USEMODULE += shell
 USEMODULE += sixlowpan
 USEMODULE += sixlowpan_hc

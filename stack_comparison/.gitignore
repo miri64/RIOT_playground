@@ -1,0 +1,6 @@
+bin/
+*~
+.*.swp
+*.orig
+.syntastic*
+.vim*

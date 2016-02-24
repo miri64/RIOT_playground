@@ -28,11 +28,7 @@
 
 #define TIMER_WINDOW_SIZE   (16)
 
-#ifdef EXP_MULTIHOP
-static const ipv6_addr_t dst = EXP_PREFIX;
-#else
 static const ipv6_addr_t dst = EXP_DST;
-#endif
 static const uint8_t honeyguide[] = { 0x2d, 0x4e, 0x70 };
 
 static uint8_t payload_buffer[EXP_MAX_PAYLOAD];
@@ -79,14 +75,6 @@ void exp_run(void)
 {
     netdev2_test_set_send_cb(&netdevs[0], _netdev2_send);
     memset(timer_window, 0, sizeof(timer_window));
-
-#ifdef EXP_MULTIHOP
-    ipv6_addr_t next_hop = EXP_NEXT_HOP;
-    eui64_t next_hop_l2 = { byteorder_htonll(EXP_NEXT_HOP_L2) };
-    stack_add_prefix(0, &dst, EXP_PREFIX_LEN);
-    stack_add_route(0, &dst, EXP_PREFIX_LEN, &next_hop);
-    stack_add_neighbor(0, &next_hop, next_hop_l2.uint8, sizeof(next_hop_l2));
-#endif
 
     puts("payload_len,tx_traversal_time");
     /* start with at least 1 id byte */

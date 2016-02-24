@@ -28,11 +28,8 @@ extern "C" {
  */
 void stack_init(void);
 
-void stack_add_prefix(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len);
 void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
                         const uint8_t *l2_addr, uint8_t l2_addr_len);
-void stack_add_route(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len, 
-                     const ipv6_addr_t *next_hop);
 
 #ifdef __cplusplus
 }

@@ -57,36 +57,10 @@ void stack_init(void)
     gnrc_ipv6_netif_init_by_dev();
 }
 
-void stack_add_prefix(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len)
-{
-    ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
-    if (gnrc_netapi_get(_pids[iface], NETOPT_IPV6_IID, 0, &addr.u64[1],
-                        sizeof(eui64_t)) >= 0) {
-        ipv6_addr_init_prefix(&addr, prefix, prefix_len);
-        gnrc_ipv6_netif_add_addr(_pids[iface], &addr, prefix_len, 0);
-    }
-}
-
 void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
                         const uint8_t *l2_addr, uint8_t l2_addr_len)
 {
     gnrc_ipv6_nc_add(_pids[iface], ipv6_addr, l2_addr, l2_addr_len, 0);
-}
-
-void stack_add_route(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len,
-                     const ipv6_addr_t *next_hop)
-{
-    ipv6_addr_t route = IPV6_ADDR_UNSPECIFIED;
-    uint32_t dst_flags = 0;
-
-    ipv6_addr_init_prefix(&route, prefix, prefix_len);
-    if (!ipv6_addr_is_unspecified(&route)) {
-        dst_flags |= FIB_FLAG_NET_PREFIX;
-    }
-    fib_add_entry(&gnrc_ipv6_fib_table, _pids[iface],
-                  (uint8_t *)&route, sizeof(ipv6_addr_t), dst_flags,
-                  (uint8_t *)next_hop, sizeof(ipv6_addr_t), 0,
-                  (uint32_t)FIB_LIFETIME_NO_EXPIRE);
 }
 
 /** @} */

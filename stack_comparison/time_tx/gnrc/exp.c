@@ -73,6 +73,7 @@ static int _netdev2_send(netdev2_t *dev, const struct iovec *vector, int count)
 
 void exp_run(void)
 {
+    static const ipv6_addr_t unspec = IPV6_ADDR_UNSPECIFIED;
     netdev2_test_set_send_cb(&netdevs[0], _netdev2_send);
     memset(timer_window, 0, sizeof(timer_window));
 
@@ -87,7 +88,7 @@ void exp_run(void)
                    &payload_size, sizeof(uint16_t));
             memcpy(&payload_buffer[payload_size - 3], honeyguide, sizeof(honeyguide));
             timer_window[id % TIMER_WINDOW_SIZE] = xtimer_now();
-            conn_udp_sendto(payload_buffer, payload_size, NULL, 0,
+            conn_udp_sendto(payload_buffer, payload_size, &unspec, sizeof(unspec),
                             &dst, sizeof(dst), AF_INET6, EXP_SRC_PORT, EXP_DST_PORT);
         }
     }

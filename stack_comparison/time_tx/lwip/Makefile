@@ -5,6 +5,4 @@ USEMODULE += lwip_netif
 USEMODULE += lwip_sixlowpan
 USEMODULE += lwip_udp
 
-USEMODULE += od
-
 include ../Makefile.common

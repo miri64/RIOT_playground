@@ -28,7 +28,8 @@
 
 #define TIMER_WINDOW_SIZE   (16)
 
-static const ipv6_addr_t dst = EXP_DST;
+static const ipv6_addr_t dst = EXP_ADDR;
+static const uint8_t dst_l2[] = EXP_ADDR_L2;
 static const uint8_t honeyguide[] = { 0x2d, 0x4e, 0x70 };
 
 static uint8_t payload_buffer[EXP_MAX_PAYLOAD];
@@ -76,6 +77,8 @@ void exp_run(void)
     static const ipv6_addr_t unspec = IPV6_ADDR_UNSPECIFIED;
     netdev2_test_set_send_cb(&netdevs[0], _netdev2_send);
     memset(timer_window, 0, sizeof(timer_window));
+
+    stack_add_neighbor(0, &dst, dst_l2, sizeof(dst_l2));
 
     puts("payload_len,tx_traversal_time");
     /* start with at least 1 id byte */

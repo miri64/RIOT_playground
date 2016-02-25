@@ -21,6 +21,7 @@
 #include "lwip/netif/netdev2.h"
 #include "lwip/netif.h"
 #include "netif/lowpan6.h"
+#include "xtimer.h"
 
 #include "netdev.h"
 
@@ -32,11 +33,13 @@ void stack_init(void)
 {
     /* netdev needs to be set-up */
     assert(netdevs[0].netdev.netdev.driver);
-    for (int i = 0; i < NETDEV_NUMOF; i++) {
+    for (unsigned i = 0; i < NETDEV_NUMOF; i++) {
         netif_add(&netifs[i], &netdevs[i], lwip_netdev2_init,
                   tcpip_6lowpan_input);
     }
     netif_set_default(&netifs[0]);
+    lwip_bootstrap();
+    xtimer_sleep(3);    /* Let the auto-configuration run warm */
 }
 
 void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
@@ -53,7 +56,6 @@ void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
             return;
         }
     }
-    lwip_bootstrap();
 }
 
 /** @} */

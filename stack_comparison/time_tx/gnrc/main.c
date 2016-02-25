@@ -13,14 +13,20 @@
  * @author Martine Lenders <mlenders@inf.fu-berlin.de>
  */
 
+#include "msg.h"
 #include "xtimer.h"
 
 #include "netdev.h"
 #include "stack.h"
 #include "exp.h"
 
+#define MAIN_MSG_QUEUE_SIZE (8)
+
+static msg_t main_msg_queue[MAIN_MSG_QUEUE_SIZE];
+
 int main(void) {
     xtimer_init();
+    msg_init_queue(main_msg_queue, MAIN_MSG_QUEUE_SIZE);
     netdev_init();
     stack_init();
     exp_run();

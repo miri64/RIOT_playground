@@ -25,15 +25,16 @@
 
 #include "stack.h"
 
-#define EMB6_STACKSIZE  (THREAD_STACKSIZE_DEFAULT)
+#define EMB6_STACKSIZE  (THREAD_STACKSIZE_MAIN)
 #define EMB6_PRIO       (THREAD_PRIORITY_MAIN - 3)
-#define EMB6_DELAY      (500)
+#define EMB6_DELAY      (130)
 
 static s_ns_t emb6;
 static char emb6_stack[EMB6_STACKSIZE];
 
 static void *_emb6_thread(void *args)
 {
+    (void)args;
     emb6_process(EMB6_DELAY);   /* never stops */
     return NULL;
 }
@@ -60,7 +61,10 @@ void stack_init(void)
 void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
                         const uint8_t *l2_addr, uint8_t l2_addr_len)
 {
-    
+    (void)iface;
+    (void)l2_addr_len;
+    uip_ds6_nbr_add((const uip_ipaddr_t *)ipv6_addr,
+                    (const uip_lladdr_t *)l2_addr, 0, NBR_REACHABLE);
 }
 
 /** @} */

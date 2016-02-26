@@ -38,6 +38,10 @@ extern "C" {
 #define EXP_DST_PORT    (EXP_SRC_PORT)
 #endif
 
+#ifndef EXP_PACKET_DELAY
+#define EXP_PACKET_DELAY    (0U)
+#endif
+
 #ifndef EXP_MAX_PAYLOAD
 #define EXP_MAX_PAYLOAD (1232U)
 #elif EXP_MAX_PAYLOAD < 6
@@ -45,7 +49,7 @@ extern "C" {
 #endif
 
 #ifndef EXP_PAYLOAD_STEP
-#define EXP_PAYLOAD_STEP (24U)
+#define EXP_PAYLOAD_STEP (8U)
 #endif
 
 #ifndef EXP_RUNS

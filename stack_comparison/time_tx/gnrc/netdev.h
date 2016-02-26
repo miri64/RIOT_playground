@@ -27,6 +27,21 @@ extern "C" {
 #define NETDEV_NUMOF    (1U)    /**< number of network devices */
 #endif
 
+#ifndef NETDEV_ADDR_PREFIX
+/**
+ * @brief array to base long address of devices of
+ *
+ * last two bytes will be used for short address of devices.
+ * last byte will be replaced by the device's index in @ref netdevs
+ */
+#define NETDEV_ADDR_PREFIX  { 0x02, 0x01, 0x02, 0x03, \
+                              0x04, 0x05, 0x06, 0x00 }
+#endif
+
+#ifndef NETDEV_PAN_ID
+#define NETDEV_PAN_ID   (0x0708)
+#endif
+
 /**
  * @brief   Network devices for the test
  */

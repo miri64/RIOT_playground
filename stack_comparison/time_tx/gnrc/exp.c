@@ -83,8 +83,8 @@ void exp_run(void)
     stack_add_neighbor(0, &dst, dst_l2, sizeof(dst_l2));
 
     puts("payload_len,tx_traversal_time");
-    /* start with at least 1 id byte */
-    for (payload_size = 6; payload_size <= EXP_MAX_PAYLOAD; payload_size += EXP_PAYLOAD_STEP) {
+    for (payload_size = EXP_PAYLOAD_STEP; payload_size <= EXP_MAX_PAYLOAD;
+         payload_size += EXP_PAYLOAD_STEP) {
         for (unsigned id = 0; id < EXP_RUNS; id++) {
             for (int j = 0; j < (payload_size - TAIL_LEN); j++) {
                 payload_buffer[j] = id & 0xff;

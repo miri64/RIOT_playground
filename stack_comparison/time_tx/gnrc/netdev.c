@@ -52,9 +52,9 @@ static int _get_max_pkt_size(netdev2_t *dev, void *value, size_t max_len)
 
 void netdev_init(void)
 {
+    uint8_t addr[] = NETDEV_ADDR_PREFIX;
     for (uint8_t i = 0; i < NETDEV_NUMOF; i++) {
-        const uint8_t addr[] = { 0x02, 0x01, 0x02, 0x03,
-                                 0x04, 0x05, 0x06, i };
+        addr[7] = i;
         netdev2_test_setup(&netdevs[i], NULL);
         netdev2_test_set_get_cb(&netdevs[i], NETOPT_SRC_LEN, _get_src_len);
         netdev2_test_set_get_cb(&netdevs[i], NETOPT_MAX_PACKET_SIZE,
@@ -66,7 +66,7 @@ void netdev_init(void)
         netdevs[i].netdev.proto = GNRC_NETTYPE_UNDEF;
 #endif
 #endif
-        netdevs[i].netdev.pan = 0x0708;
+        netdevs[i].netdev.pan = NETDEV_PAN_ID;
         memcpy(netdevs[i].netdev.short_addr, &addr[6], sizeof(uint16_t));
         memcpy(netdevs[i].netdev.long_addr, &addr[0], sizeof(uint64_t));
         netdevs[i].netdev.seq = 0;

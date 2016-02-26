@@ -44,12 +44,14 @@ extern "C" {
 
 #ifndef EXP_MAX_PAYLOAD
 #define EXP_MAX_PAYLOAD (1232U)
-#elif EXP_MAX_PAYLOAD < 6
-#error "EXP_MAX_PAYLOAD needs to be at least 6"
+#elif EXP_MAX_PAYLOAD < 5
+#error "EXP_MAX_PAYLOAD needs to be at least 5"
 #endif
 
 #ifndef EXP_PAYLOAD_STEP
 #define EXP_PAYLOAD_STEP (8U)
+#elif EXP_PAYLOAD_STEP < 5
+#error "EXP_MAX_PAYLOAD needs to be at least 5"
 #endif
 
 #ifndef EXP_RUNS

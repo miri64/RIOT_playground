@@ -6,4 +6,6 @@ USEMODULE += lwip_sixlowpan
 USEMODULE += lwip_udp
 USEMODULE += inet_csum
 
+CFLAGS += -DMEM_SIZE="(THREAD_STACKSIZE_DEFAULT + 10592)"
+
 include ../Makefile.common

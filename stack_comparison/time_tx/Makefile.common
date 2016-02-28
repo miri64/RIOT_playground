@@ -10,6 +10,8 @@ USEMODULE += netdev2_ieee802154
 USEMODULE += netdev2_test
 USEMODULE += xtimer
 
+CFLAGS += -DAPPLICATION_NAME='"$(APPLICATION)"'
+
 QUIET ?= 1
 
 include $(RIOTBASE)/Makefile.include

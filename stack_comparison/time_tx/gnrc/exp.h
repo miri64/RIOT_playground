@@ -42,6 +42,14 @@ extern "C" {
 #define EXP_PACKET_DELAY    (0U)
 #endif
 
+#ifndef NHC_ENABLED
+#define NHC_ENABLED         (1U)
+#endif
+
+#ifndef EXP_FRAGMENT_DELAY
+#define EXP_FRAGMENT_DELAY  (0U)
+#endif
+
 #ifndef EXP_MAX_PAYLOAD
 #define EXP_MAX_PAYLOAD (1232U)
 #elif EXP_MAX_PAYLOAD < 5

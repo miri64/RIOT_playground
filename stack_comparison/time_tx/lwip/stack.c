@@ -31,11 +31,16 @@ static struct netif netifs[NETDEV_NUMOF];
 
 void stack_init(void)
 {
+    uint8_t iid[] = NETDEV_ADDR_PREFIX;
     /* netdev needs to be set-up */
     assert(netdevs[0].netdev.netdev.driver);
+    iid[0] ^= 0x02;
     for (unsigned i = 0; i < NETDEV_NUMOF; i++) {
         netif_add(&netifs[i], &netdevs[i], lwip_netdev2_init,
                   tcpip_6lowpan_input);
+        /* set proper IID */
+        iid[7] = (i & 0xff);
+        ipv6_addr_set_aiid((ipv6_addr_t *)&netifs[i].ip6_addr[0], iid);
     }
     netif_set_default(&netifs[0]);
     lwip_bootstrap();

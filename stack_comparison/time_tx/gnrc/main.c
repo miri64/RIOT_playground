@@ -27,12 +27,13 @@
 static msg_t main_msg_queue[MAIN_MSG_QUEUE_SIZE];
 
 int main(void) {
-    printf("%s\n", APPLICATION_NAME);
+    printf("%s\n started", APPLICATION_NAME);
     xtimer_init();
     msg_init_queue(main_msg_queue, MAIN_MSG_QUEUE_SIZE);
     netdev_init();
     stack_init();
     exp_run();
+    printf("%s stopped\n", APPLICATION_NAME);
     return 0;
 }
 

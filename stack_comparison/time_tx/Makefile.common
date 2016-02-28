@@ -6,6 +6,7 @@ RIOTBASE ?= $(CURDIR)/../../../../RIOT
 
 DISABLE_MODULE += auto_init
 
+USEMODULE += inet_csum
 USEMODULE += netdev2_ieee802154
 USEMODULE += netdev2_test
 USEMODULE += xtimer

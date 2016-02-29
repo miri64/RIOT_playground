@@ -1,6 +1,6 @@
 APPLICATION := $(shell basename $(CURDIR))_$(shell basename $(realpath $(CURDIR)/..))
 
-BOARD ?= samr21-xpro
+BOARD ?= iotlab-m3
 
 RIOTBASE ?= $(CURDIR)/../../../../RIOT
 

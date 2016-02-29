@@ -27,7 +27,7 @@
 
 #define EMB6_STACKSIZE  (THREAD_STACKSIZE_MAIN)
 #define EMB6_PRIO       (THREAD_PRIORITY_MAIN - 3)
-#define EMB6_DELAY      (130)
+#define EMB6_DELAY      (58)
 
 static s_ns_t emb6;
 static char emb6_stack[EMB6_STACKSIZE];

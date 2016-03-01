@@ -38,7 +38,13 @@
 
 #define IEEE802154_MAX_FRAME_SIZE   (125U)
 #define MHR_LEN                     (23U)
-#define IPHC_LEN                    (3U)
+#if (((EXP_DST_PORT & 0xfff0) == 0xf0b0) && ((EXP_SRC_PORT & 0xfff0) == 0xf0b0))
+#define IPHC_LEN                    (6U)
+#elif ((EXP_DST_PORT & 0xff00) == 0xf000) || ((EXP_SRC_PORT & 0xff00) == 0xf000)
+#define IPHC_LEN                    (8U)
+#else
+#define IPHC_LEN                    (9U)
+#endif
 #define IPUDP_LEN                   (sizeof(ipv6_hdr_t) + sizeof(udp_hdr_t))
 #define MAX_FRAGMENTS               (18)
 #define TIMER_WINDOW_SIZE           (16)
@@ -71,6 +77,7 @@ static inline void _init_fragn(uint8_t *buf, unsigned size, unsigned tag,
                                unsigned offset);
 static inline void _init_iphc(uint8_t *buf);
 static inline void _init_ipv6(ipv6_hdr_t *buf);
+static inline void _set_chksum(uint8_t *slo_buf, const udp_hdr_t *udp_buf);
 static inline udp_hdr_t *_udp_buf(void);
 static inline void _init_udp(uint16_t src_port, uint16_t dst_port,
                              uint16_t length);
@@ -167,15 +174,14 @@ void exp_run(void)
         for (unsigned id = 0; id < EXP_RUNS; id++) {
             mutex_lock(&sync);
             _id = id;
-            size_t offset = sizeof(ipv6_hdr_t);
-            unsigned pos = IPUDP_LEN;
+            size_t offset = IPUDP_LEN;
             unsigned fragments = 0;
 
-            for (unsigned j = 0; j < payload_size; j++) {
-                uncomp_buffer[pos++] = (id & 0xff);
-            }
+            memset(&uncomp_buffer[offset], id & 0xff, payload_size);
             _init_udp(EXP_SRC_PORT, EXP_DST_PORT, payload_size);
             if (fragmented) {
+                _set_chksum(&(frag_buf[0][frag_buf_len[0] - IPHC_LEN]),
+                            _udp_buf());
                 for (unsigned i = 0; i < MAX_FRAGMENTS; i++) {
                     sixlowpan_frag_t *f = (sixlowpan_frag_t *)_sixlowpan_buf(frag_buf[i]);
                     unsigned max_len;
@@ -205,6 +211,8 @@ void exp_run(void)
                 }
             }
             else {
+                _set_chksum(&(frag_buf[0][frag_buf_len[0] - IPHC_LEN]),
+                            _udp_buf());
                 while (offset < (IPUDP_LEN + payload_size)) {
                     frag_buf[0][frag_buf_len[0]++] = uncomp_buffer[offset++];
                 }
@@ -261,12 +269,37 @@ static inline void _init_fragn(uint8_t *buf, unsigned size, unsigned tag,
 static inline void _init_iphc(uint8_t *buf)
 {
     buf[0] = SIXLOWPAN_IPHC1_DISP;
-    buf[0] |= SIXLOWPAN_IPHC1_TF;
-    buf[0] |= 0x02;    /* Hop-limit: 64 */
+    buf[0] |= SIXLOWPAN_IPHC1_TF | SIXLOWPAN_IPHC1_NH;
+    buf[0] |= 0x02;     /* Hop-limit: 64 */
     buf[1] = 0;
     buf[1] |= SIXLOWPAN_IPHC2_SAM;
     buf[1] |= SIXLOWPAN_IPHC2_DAM;
-    buf[2] = PROTNUM_UDP;
+    buf[2] = 0xf0;      /* UDP LOWPAN_NHC ID */
+#if (((EXP_DST_PORT & 0xfff0) == 0xf0b0) && ((EXP_SRC_PORT & 0xfff0) == 0xf0b0))
+    buf[2] |= 0x03;
+    buf[3] = (((EXP_SRC_PORT) & 0xf) << 4) | ((EXP_DST_PORT) & 0xf);
+#elif ((EXP_DST_PORT & 0xff00) == 0xf000)
+    buf[2] |= 0x01;
+    buf[3] = (EXP_SRC_PORT >> 8);
+    buf[4] = (EXP_SRC_PORT & 0xff);
+    buf[5] = (EXP_DST_PORT & 0xff);
+#elif ((EXP_SRC_PORT & 0xff00) == 0xf000)
+    buf[2] |= 0x02;
+    buf[3] = (EXP_SRC_PORT & 0xff);
+    buf[4] = (EXP_DST_PORT >> 8);
+    buf[5] = (EXP_DST_PORT & 0xff);
+#else
+    buf[3] = (EXP_SRC_PORT >> 8);
+    buf[4] = (EXP_SRC_PORT & 0xff);
+    buf[5] = (EXP_DST_PORT >> 8);
+    buf[6] = (EXP_DST_PORT & 0xff);
+#endif
+}
+
+static inline void _set_chksum(uint8_t *slo_buf, const udp_hdr_t *udp_buf)
+{
+    slo_buf[IPHC_LEN - 2] = udp_buf->checksum.u8[0];
+    slo_buf[IPHC_LEN - 1] = udp_buf->checksum.u8[1];
 }
 
 static inline void _init_ipv6(ipv6_hdr_t *buf)
@@ -314,26 +347,25 @@ static void prepare_mhrs(void)
 
 static bool prepare_sixlowpan(void)
 {
-    if (payload_size > (IEEE802154_MAX_FRAME_SIZE - MHR_LEN - IPHC_LEN -
-                        sizeof(udp_hdr_t))) {
+    if (payload_size > (IEEE802154_MAX_FRAME_SIZE - MHR_LEN - IPHC_LEN)) {
 #if defined(MODULE_LWIP)    /* lwIP uses datagram size *after* compression */
         int fragn_offset = ((IEEE802154_MAX_FRAME_SIZE - MHR_LEN -
                              sizeof(sixlowpan_frag_t) - IPHC_LEN) >> 3) << 3;
 #else
         int fragn_offset = ((IEEE802154_MAX_FRAME_SIZE - MHR_LEN -
                              sizeof(sixlowpan_frag_t) - IPHC_LEN +
-                             sizeof(ipv6_hdr_t)) >> 3) << 3;
+                             sizeof(ipv6_hdr_t) + sizeof(udp_hdr_t)) >> 3) << 3;
 #endif
         _init_iphc(_sixlowpan_buf(frag_buf[0]) + sizeof(sixlowpan_frag_t));
 #if defined(MODULE_LWIP)    /* lwIP uses datagram size *after* compression */
-        _init_frag1(frag_buf[0], payload_size + IPHC_LEN + sizeof(udp_hdr_t), 0);
+        _init_frag1(frag_buf[0], payload_size + IPHC_LEN, 0);
 #else
         _init_frag1(frag_buf[0], payload_size + IPUDP_LEN, 0);
 #endif
         frag_buf_len[0] = MHR_LEN + sizeof(sixlowpan_frag_t) + IPHC_LEN;
         for (unsigned frag = 1; frag < MAX_FRAGMENTS; frag++) {
 #if defined(MODULE_LWIP)    /* lwIP uses datagram size *after* compression */
-            _init_fragn(frag_buf[frag], payload_size + IPHC_LEN + sizeof(udp_hdr_t), 0,
+            _init_fragn(frag_buf[frag], payload_size + IPHC_LEN, 0,
                         fragn_offset);
 #else
             _init_fragn(frag_buf[frag], payload_size + IPUDP_LEN, 0,
@@ -355,8 +387,7 @@ static bool prepare_sixlowpan(void)
 
 static void reset_frag_buf(void)
 {
-    if (payload_size > (IEEE802154_MAX_FRAME_SIZE - MHR_LEN - IPHC_LEN -
-                        sizeof(udp_hdr_t))) {
+    if (payload_size > (IEEE802154_MAX_FRAME_SIZE - MHR_LEN - IPHC_LEN)) {
         frag_buf_len[0] = MHR_LEN + IPHC_LEN + sizeof(sixlowpan_frag_t);
         for (unsigned frag = 1; frag < MAX_FRAGMENTS; frag++) {
             frag_buf_len[frag] = MHR_LEN + sizeof(sixlowpan_frag_n_t);

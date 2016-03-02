@@ -30,6 +30,15 @@ void stack_init(void);
 
 void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
                         const uint8_t *l2_addr, uint8_t l2_addr_len);
+#ifdef STACK_MULTIHOP
+const ipv6_addr_t *stack_add_prefix(int iface, const ipv6_addr_t *prefix,
+                                    uint8_t prefix_len);
+void stack_add_route(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len,
+                     const ipv6_addr_t *next_hop);
+#endif
+#ifdef STACK_RPL
+void stack_init_rpl(int iface, const ipv6_addr_t *dodag_id);
+#endif
 
 #ifdef __cplusplus
 }

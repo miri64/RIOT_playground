@@ -15,9 +15,14 @@
 
 #include <assert.h>
 
+#ifdef STACK_MULTIHOP
 #include "net/fib.h"
+#endif
 #include "net/gnrc/ipv6.h"
 #include "net/gnrc/netdev2/ieee802154.h"
+#ifdef STACK_RPL
+#include "net/gnrc/rpl.h"
+#endif
 #include "net/gnrc/sixlowpan.h"
 #include "net/gnrc/udp.h"
 #include "net/gnrc.h"
@@ -62,5 +67,45 @@ void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
 {
     gnrc_ipv6_nc_add(_pids[iface], ipv6_addr, l2_addr, l2_addr_len, 0);
 }
+
+#ifdef STACK_MULTIHOP
+const ipv6_addr_t *stack_add_prefix(int iface, const ipv6_addr_t *prefix,
+                                    uint8_t prefix_len)
+{
+    netdev2_t *netdev = (netdev2_t *)&netdevs[iface];
+    ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
+
+    netdev->driver->get(netdev, NETOPT_IPV6_IID, &addr.u64[1],
+                        sizeof(addr.u64[1]));
+    ipv6_addr_init_prefix(&addr, prefix, prefix_len);
+    return gnrc_ipv6_netif_add_addr(_pids[iface], prefix, prefix_len, 0);
+}
+
+void stack_add_route(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len,
+                     const ipv6_addr_t *next_hop)
+{
+    uint32_t prefix_flags = 0;
+    (void)prefix_len;
+    if (ipv6_addr_is_unspecified(prefix)) {
+        prefix_flags |= FIB_FLAG_NET_PREFIX;
+    }
+    fib_add_entry(&gnrc_ipv6_fib_table, _pids[iface],
+                  (uint8_t *)prefix, sizeof(ipv6_addr_t), prefix_flags,
+                  (uint8_t *)next_hop, sizeof(ipv6_addr_t), 0,
+                  (uint32_t)FIB_LIFETIME_NO_EXPIRE);
+}
+#endif
+
+#ifdef STACK_RPL
+void stack_init_rpl(int iface, const ipv6_addr_t *dodag_id)
+{
+    gnrc_rpl_init(_pids[iface]);
+#ifdef STACK_RPL_ROOT
+    gnrc_rpl_root_init(0, (ipv6_addr_t *)dodag_id, true, false);
+#else
+    (void)dodag_id;
+#endif
+}
+#endif
 
 /** @} */

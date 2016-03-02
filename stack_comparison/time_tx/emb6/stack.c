@@ -14,9 +14,13 @@
  */
 
 #include <assert.h>
+#include <inttypes.h>
 
 #include "emb6.h"
 #include "emb6/netdev2.h"
+#ifdef STACK_RPL
+#include "rpl.h"
+#endif
 #include "uip-ds6.h"
 #include "net/ipv6/addr.h"
 #include "thread.h"
@@ -66,5 +70,47 @@ void stack_add_neighbor(int iface, const ipv6_addr_t *ipv6_addr,
     uip_ds6_nbr_add((const uip_ipaddr_t *)ipv6_addr,
                     (const uip_lladdr_t *)l2_addr, 0, NBR_REACHABLE);
 }
+
+#ifdef STACK_MULTIHOP
+const ipv6_addr_t *stack_add_prefix(int iface, const ipv6_addr_t *prefix,
+                                    uint8_t prefix_len)
+{
+    ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
+    netdev2_t *netdev = (netdev2_t *)&netdevs[iface];
+
+    (void)iface;
+    netdev->driver->get(netdev, NETOPT_IPV6_IID, &addr.u64[1],
+                        sizeof(addr.u64[1]));
+    ipv6_addr_init_prefix(&addr, prefix, prefix_len);
+    return (ipv6_addr_t *)&(uip_ds6_addr_add((uip_ipaddr_t *)&addr, 0,
+                                             ADDR_MANUAL)->ipaddr);
+}
+
+void stack_add_route(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len,
+                     const ipv6_addr_t *next_hop)
+{
+    uip_ds6_route_t *res;
+
+    (void)iface;
+    res = uip_ds6_route_add((uip_ipaddr_t *)prefix, prefix_len,
+                            (uip_ipaddr_t *)next_hop);
+    if (res != NULL) {
+        res->state.lifetime = UINT32_MAX;
+    }
+}
+#endif
+
+#ifdef STACK_RPL
+void stack_init_rpl(int iface, const ipv6_addr_t *dodag_id)
+{
+    (void)iface;
+    rpl_init();
+#ifdef STACK_RPL_ROOT
+    rpl_set_root(0, (uip_ipaddr_t *)dodag_id);
+#else
+    (void)dodag_id;
+#endif
+}
+#endif
 
 /** @} */

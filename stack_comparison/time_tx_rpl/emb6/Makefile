@@ -1,1 +1,12 @@
-../../time_rx/emb6/Makefile
+USEMODULE += emb6_router
+USEMODULE += emb6_conn_udp
+USEMODULE += ipv6_addr
+
+CFLAGS += -DUIP_CONF_BUFFER_SIZE=3000
+CFLAGS += -DQUEUEBUF_CONF_NUM=16
+CFLAGS += -DQUEUEBUF_CONF_REF_NUM=16
+CFLAGS += -DSTACK_MULTIHOP
+CFLAGS += -DSTACK_RPL
+CFLAGS += -DSTACK_RPL_ROOT
+
+include ../Makefile.common

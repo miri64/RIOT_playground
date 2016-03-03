@@ -38,6 +38,15 @@ extern "C" {
 #define EXP_DST_PORT    (EXP_SRC_PORT)
 #endif
 
+#ifndef EXP_PREFIX
+#define EXP_PREFIX      { { 0xab, 0xcd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } }
+#endif
+
+#ifndef EXP_PREFIX_LEN
+#define EXP_PREFIX_LEN      (16U)
+#endif
+
 #ifndef EXP_PACKET_DELAY
 #define EXP_PACKET_DELAY    (0U)
 #endif

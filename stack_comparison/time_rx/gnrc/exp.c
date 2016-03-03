@@ -156,9 +156,21 @@ void *_thread(void *arg)
 void exp_run(void)
 {
     dst_l2[7] = 0;
+
     ipv6_addr_set_link_local_prefix(&dst);
     ipv6_addr_set_aiid(&dst, dst_l2);
     dst.u8[8] ^= 0x02;
+#ifdef STACK_MULTIHOP
+    const ipv6_addr_t *gua;
+    ipv6_addr_t prefix = EXP_PREFIX, unspec = IPV6_ADDR_UNSPECIFIED;
+    gua = stack_add_prefix(0, &prefix, EXP_PREFIX_LEN);
+    stack_add_route(0, &unspec, 0, &dst);
+#ifdef STACK_RPL
+    stack_init_rpl(0, gua);
+#else
+    (void)gua;
+#endif
+#endif
     prepare_mhrs();
     _init_ipv6((ipv6_hdr_t *)uncomp_buffer);
     if (thread_create(thread_stack, sizeof(thread_stack), THREAD_PRIO,

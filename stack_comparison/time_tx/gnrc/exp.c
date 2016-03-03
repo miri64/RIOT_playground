@@ -28,7 +28,7 @@
 
 #define TIMER_WINDOW_SIZE   (16)
 
-static const ipv6_addr_t dst = EXP_ADDR;
+static ipv6_addr_t dst = EXP_ADDR;
 static const uint8_t dst_l2[] = EXP_ADDR_L2;
 static const uint8_t honeyguide[] = { 0x2d, 0x4e };
 
@@ -81,6 +81,19 @@ void exp_run(void)
 
     netdev2_test_set_send_cb(&netdevs[0], _netdev2_send);
     stack_add_neighbor(0, &dst, dst_l2, sizeof(dst_l2));
+#ifdef STACK_MULTIHOP
+    const ipv6_addr_t *gua;
+    ipv6_addr_t prefix = EXP_PREFIX;
+    gua = stack_add_prefix(0, &prefix, EXP_PREFIX_LEN);
+    stack_add_route(0, &unspec, 0, &dst);
+#ifdef STACK_RPL
+    stack_init_rpl(0, gua);
+#else
+    (void)gua;
+#endif
+    dst.u64[0].u64 = 0;
+    ipv6_addr_init_prefix(&dst, &prefix, EXP_PREFIX_LEN);
+#endif
 
     puts("payload_len,tx_traversal_time");
     for (payload_size = EXP_PAYLOAD_STEP; payload_size <= EXP_MAX_PAYLOAD;

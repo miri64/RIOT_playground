@@ -75,6 +75,13 @@ extern "C" {
 #define EXP_RUNS        (1000U)
 #endif
 
+#ifndef EXP_POWER_MEASURE_DELAY
+#define EXP_POWER_MEASURE_DELAY (140 * 8)
+#endif
+
+#ifndef EXP_PAYLOAD_STEP_DELAY
+#define EXP_PAYLOAD_STEP_DELAY  (4000)
+#endif
 void exp_run(void);
 
 #ifdef __cplusplus

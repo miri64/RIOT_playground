@@ -15,6 +15,7 @@
 
 #include <inttypes.h>
 
+#include "board.h"
 #include "net/af.h"
 #include "net/conn/udp.h"
 #include "net/ipv6/addr.h"
@@ -96,10 +97,19 @@ void exp_run(void)
 #endif
 
     puts("payload_len,tx_traversal_time");
+    for (unsigned i = 0; i < 3; i++) {
+        xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
+    }
     for (payload_size = EXP_PAYLOAD_STEP; payload_size <= EXP_MAX_PAYLOAD;
          payload_size += EXP_PAYLOAD_STEP) {
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
         for (unsigned id = 0; id < EXP_RUNS; id++) {
-            for (int j = 0; j < (payload_size - TAIL_LEN); j++) {
+            for (unsigned j = 0; j < (payload_size - TAIL_LEN); j++) {
                 payload_buffer[j] = id & 0xff;
             }
             memcpy((uint16_t *)&payload_buffer[payload_size - TAIL_LEN],
@@ -113,6 +123,10 @@ void exp_run(void)
             xtimer_usleep(EXP_PACKET_DELAY);
 #endif
         }
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
+        xtimer_usleep(EXP_PAYLOAD_STEP_DELAY);
     }
 }
 

@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "board.h"
 #include "byteorder.h"
 #include "msg.h"
 #include "mutex.h"
@@ -180,9 +181,18 @@ void exp_run(void)
     netdev2_test_set_isr_cb(&netdevs[0], _netdev_isr);
     netdev2_test_set_recv_cb(&netdevs[0], _netdev_recv);
     puts("payload_len,rx_traversal_time");
+    for (unsigned i = 0; i < 3; i++) {
+        xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
+    }
     for (payload_size = EXP_PAYLOAD_STEP; payload_size <= EXP_MAX_PAYLOAD;
          payload_size += EXP_PAYLOAD_STEP) {
         bool fragmented = prepare_sixlowpan();
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
         for (unsigned id = 0; id < EXP_RUNS; id++) {
             mutex_lock(&sync);
             _id = id;
@@ -245,6 +255,10 @@ void exp_run(void)
             reset_frag_buf();
             mutex_unlock(&sync);
         }
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
+        xtimer_usleep(EXP_PAYLOAD_STEP_DELAY);
     }
     /* for size comparison include remaining conn_udp functions */
     conn_udp_sendto(recv_buffer, 2, &dst, sizeof(dst), &src, sizeof(src), AF_INET6,

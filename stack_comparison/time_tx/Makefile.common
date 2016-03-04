@@ -14,6 +14,13 @@ USEMODULE += xtimer
 
 CFLAGS += -DAPPLICATION_NAME='"$(APPLICATION)"'
 
+STACKTEST ?= 0
+
+ifneq (0,$(STACKTEST))
+  CFLAGS += -DEXP_STACKTEST
+  CFLAGS += -DDEVELHELP
+endif
+
 QUIET ?= 1
 
 include $(RIOTBASE)/Makefile.include

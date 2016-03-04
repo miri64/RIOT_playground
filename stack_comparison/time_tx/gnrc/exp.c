@@ -20,6 +20,7 @@
 #include "net/conn/udp.h"
 #include "net/ipv6/addr.h"
 #include "net/netdev2_test.h"
+#include "thread.h"
 #include "xtimer.h"
 
 #include "netdev.h"
@@ -72,7 +73,12 @@ static int _netdev2_send(netdev2_t *dev, const struct iovec *vector, int count)
     }
 
     start = timer_window[id % TIMER_WINDOW_SIZE];
+#ifndef EXP_STACKTEST
     printf("%u,%" PRIu32 "\n", (unsigned)exp_payload_len, (stop - start));
+#else
+    (void)stop;
+    (void)start;
+#endif
     return res;
 }
 
@@ -123,6 +129,23 @@ void exp_run(void)
             xtimer_usleep(EXP_PACKET_DELAY);
 #endif
         }
+#ifdef EXP_STACKTEST
+        unsigned stack_size_sum = 0;
+        unsigned stack_usage_sum = 0;
+        for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
+            const tcb_t *p = (tcb_t *)sched_threads[i];
+            if ((p != NULL) &&
+                (strcmp(p->name, "idle") != 0) &&
+                (strcmp(p->name, "main") != 0)) {
+                unsigned stacksz = p->stack_size;
+                printf("%s\n",p->name);
+                stack_usage_sum += stacksz;
+                stacksz -= thread_measure_stack_free(p->stack_start);
+                stack_size_sum += stacksz;
+            }
+        }
+        printf("%u,%u,%u\n", payload_size, stack_size_sum, stack_usage_sum);
+#endif
         LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
         xtimer_usleep(EXP_POWER_MEASURE_DELAY);
         LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;

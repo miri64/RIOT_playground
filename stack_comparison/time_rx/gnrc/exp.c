@@ -140,8 +140,13 @@ void *_thread(void *arg)
                                      &addr, &addr_len, &port)) > 0) {
             uint32_t stop = xtimer_now();
             uint8_t id = recv_buffer[0];
+#ifndef EXP_STACKTEST
             printf("%d,%" PRIu32 "\n", res,
                    stop - timer_window[id % TIMER_WINDOW_SIZE]);
+#else
+            (void)stop;
+            (void)id;
+#endif
         }
         else {
             /* find a reason to stop to not have conn_udp_close() optimized out
@@ -175,12 +180,16 @@ void exp_run(void)
     prepare_mhrs();
     _init_ipv6((ipv6_hdr_t *)uncomp_buffer);
     if (thread_create(thread_stack, sizeof(thread_stack), THREAD_PRIO,
-                      THREAD_CREATE_STACKTEST, _thread, NULL, "receiver") < 0) {
+                      THREAD_CREATE_STACKTEST, _thread, NULL, "exp_receiver") < 0) {
         return;
     }
     netdev2_test_set_isr_cb(&netdevs[0], _netdev_isr);
     netdev2_test_set_recv_cb(&netdevs[0], _netdev_recv);
+#ifdef EXP_STACKTEST
+    puts("payload_len,stack_size_sum,stack_usage_sum");
+#else
     puts("payload_len,rx_traversal_time");
+#endif
     for (unsigned i = 0; i < 3; i++) {
         xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
         LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
@@ -255,6 +264,24 @@ void exp_run(void)
             reset_frag_buf();
             mutex_unlock(&sync);
         }
+#ifdef EXP_STACKTEST
+        unsigned stack_size_sum = 0;
+        unsigned stack_usage_sum = 0;
+        for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
+            const tcb_t *p = (tcb_t *)sched_threads[i];
+            if ((p != NULL) &&
+                (strcmp(p->name, "idle") != 0) &&
+                (strcmp(p->name, "main") != 0) &&
+                (strcmp(p->name, "exp_receiver") != 0)) {
+                unsigned stacksz = p->stack_size;
+                printf("%s\n", p->name);
+                stack_usage_sum += stacksz;
+                stacksz -= thread_measure_stack_free(p->stack_start);
+                stack_size_sum += stacksz;
+            }
+        }
+        printf("%u,%u,%u\n", payload_size, stack_size_sum, stack_usage_sum);
+#endif
         LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
         xtimer_usleep(EXP_POWER_MEASURE_DELAY);
         LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;

@@ -29,7 +29,7 @@
 
 #include "stack.h"
 
-#define EMB6_STACKSIZE  (THREAD_STACKSIZE_MAIN)
+#define EMB6_STACKSIZE  (THREAD_STACKSIZE_DEFAULT)
 #define EMB6_PRIO       (THREAD_PRIORITY_MAIN - 3)
 #define EMB6_DELAY      (58)
 

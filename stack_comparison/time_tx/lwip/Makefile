@@ -6,5 +6,8 @@ USEMODULE += lwip_sixlowpan
 USEMODULE += lwip_udp
 
 CFLAGS += -DMEM_SIZE="(THREAD_STACKSIZE_DEFAULT + 10592)"
+CFLAGS += -DLWIP_IPV6_MLD=0
+CFLAGS += -DLWIP_IPV6_FRAG=0
+CFLAGS += -DLWIP_IPV6_REASS=0
 
 include ../Makefile.common

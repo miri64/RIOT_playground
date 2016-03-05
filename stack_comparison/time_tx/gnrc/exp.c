@@ -138,7 +138,6 @@ void exp_run(void)
                 (strcmp(p->name, "idle") != 0) &&
                 (strcmp(p->name, "main") != 0)) {
                 unsigned stacksz = p->stack_size;
-                printf("%s\n",p->name);
                 stack_usage_sum += stacksz;
                 stacksz -= thread_measure_stack_free(p->stack_start);
                 stack_size_sum += stacksz;

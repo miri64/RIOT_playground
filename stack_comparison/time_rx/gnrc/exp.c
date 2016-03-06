@@ -281,6 +281,9 @@ void exp_run(void)
         }
         printf("%u,%u,%u\n", payload_size, stack_size_sum, stack_usage_sum);
 #endif
+        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
+        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
+        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
         xtimer_usleep(EXP_PAYLOAD_STEP_DELAY);
     }
     /* for size comparison include remaining conn_udp functions */

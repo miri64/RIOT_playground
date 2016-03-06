@@ -76,11 +76,11 @@ extern "C" {
 #endif
 
 #ifndef EXP_POWER_MEASURE_DELAY
-#define EXP_POWER_MEASURE_DELAY (140 * 16)
+#define EXP_POWER_MEASURE_DELAY (140 * 32)
 #endif
 
 #ifndef EXP_PAYLOAD_STEP_DELAY
-#define EXP_PAYLOAD_STEP_DELAY  (32 * 4060)
+#define EXP_PAYLOAD_STEP_DELAY  (64 * 4060)
 #endif
 void exp_run(void);
 

@@ -16,5 +16,8 @@ IDLE ?= 0
 ifneq (0,$(IDLE))
   CFLAGS += -DIDLE_TEST
 endif
+ifneq (0,$(SLEEPY_RADIO))
+  USEMODULE += at86rf231
+endif
 
 include $(RIOTBASE)/Makefile.include

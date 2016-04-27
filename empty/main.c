@@ -6,22 +6,32 @@
  * directory for more details.
  */
 
-#include "board.h"
+#ifdef MODULE_AT86RF2XX
+#include "at86rf2xx.h"
+#include "at86rf2xx_params.h"
+#endif
+#include "led.h"
+
+#define AT86RF2XX_NUM (sizeof(at86rf2xx_params) / sizeof(at86rf2xx_params[0]))
 
 int main(void)
 {
-#ifdef LED_RED_OFF
-    LED_RED_OFF;
+#ifdef MODULE_AT86RF2XX
+    for (int i = 0; i < AT86RF2XX_NUM; i++) {
+        netopt_state_t sleep = NETOPT_STATE_SLEEP;
+        at86rf2xx_t dev;
+        netdev2_t *netdev = (netdev2_t *)&dev;
+
+        at86rf2xx_setup(&dev, &at86rf2xx_params[i]);
+        netdev->driver->init(netdev);
+        netdev->driver->set(netdev, NETOPT_STATE, &sleep, sizeof(netopt_state_t));
+    }
+
 #endif
-#ifdef LED_GREEN_OFF
-    LED_GREEN_OFF;
-#endif
-#ifdef LED_ORANGE_OFF
-    LED_ORANGE_OFF;
-#endif
-#ifdef LED_YELLOW_OFF
-    LED_YELLOW_OFF;
-#endif
+    LED0_OFF;
+    LED1_OFF;
+    LED2_OFF;
+    LED3_OFF;
 #ifndef IDLE_TEST
     while (1);
 #endif

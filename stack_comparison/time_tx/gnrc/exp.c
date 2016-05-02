@@ -15,7 +15,6 @@
 
 #include <inttypes.h>
 
-#include "board.h"
 #include "net/af.h"
 #include "net/conn/udp.h"
 #include "net/ipv6/addr.h"
@@ -107,17 +106,8 @@ void exp_run(void)
 #else
     puts("payload_len,tx_traversal_time");
 #endif
-    for (unsigned i = 0; i < 10; i++) {
-        xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
-        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
-        xtimer_usleep(4 * EXP_POWER_MEASURE_DELAY);
-        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
-    }
     for (payload_size = EXP_PAYLOAD_STEP; payload_size <= EXP_MAX_PAYLOAD;
          payload_size += EXP_PAYLOAD_STEP) {
-        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
-        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
-        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
         for (unsigned id = 0; id < EXP_RUNS; id++) {
             for (unsigned j = 0; j < (payload_size - TAIL_LEN); j++) {
                 payload_buffer[j] = id & 0xff;
@@ -149,10 +139,6 @@ void exp_run(void)
         }
         printf("%u,%u,%u\n", payload_size, stack_size_sum, stack_usage_sum);
 #endif
-        LED_RED_ON; LED_GREEN_ON; LED_ORANGE_ON;
-        xtimer_usleep(EXP_POWER_MEASURE_DELAY);
-        LED_RED_OFF; LED_GREEN_OFF; LED_ORANGE_OFF;
-        xtimer_usleep(EXP_PAYLOAD_STEP_DELAY);
     }
 }
 

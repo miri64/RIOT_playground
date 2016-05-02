@@ -87,7 +87,7 @@ void stack_add_route(int iface, const ipv6_addr_t *prefix, uint8_t prefix_len,
     uint32_t prefix_flags = 0;
     (void)prefix_len;
     if (ipv6_addr_is_unspecified(prefix)) {
-        prefix_flags |= FIB_FLAG_NET_PREFIX;
+        prefix_flags |= (((uint32_t)prefix_len) << FIB_FLAG_NET_PREFIX_SHIFT);
     }
     fib_add_entry(&gnrc_ipv6_fib_table, _pids[iface],
                   (uint8_t *)prefix, sizeof(ipv6_addr_t), prefix_flags,

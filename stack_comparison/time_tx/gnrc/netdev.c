@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "net/netopt.h"
+#include "net/netdev2/ieee802154.h"
 
 #include "netdev.h"
 
@@ -50,6 +51,46 @@ static int _get_max_pkt_size(netdev2_t *dev, void *value, size_t max_len)
     return sizeof(uint16_t);
 }
 
+static int _get_addr(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_ADDRESS, value, max_len);
+}
+
+static int _get_addr_long(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_ADDRESS_LONG, value, max_len);
+}
+
+static int _get_addr_len(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_ADDR_LEN, value, max_len);
+}
+
+static int _set_addr_len(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_set((netdev2_ieee802154_t *)dev, NETOPT_ADDR_LEN, value, max_len);
+}
+
+static int _get_nid(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_NID, value, max_len);
+}
+
+static int _get_proto(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_PROTO, value, max_len);
+}
+
+static int _get_device_type(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_DEVICE_TYPE, value, max_len);
+}
+
+static int _get_ipv6_iid(netdev2_t *dev, void *value, size_t max_len)
+{
+    return netdev2_ieee802154_get((netdev2_ieee802154_t *)dev, NETOPT_IPV6_IID, value, max_len);
+}
+
 void netdev_init(void)
 {
     uint8_t addr[] = NETDEV_ADDR_PREFIX;
@@ -59,6 +100,23 @@ void netdev_init(void)
         netdev2_test_set_get_cb(&netdevs[i], NETOPT_SRC_LEN, _get_src_len);
         netdev2_test_set_get_cb(&netdevs[i], NETOPT_MAX_PACKET_SIZE,
                                 _get_max_pkt_size);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_ADDRESS, _get_addr);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_ADDRESS_LONG,
+                                _get_addr_long);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_ADDR_LEN,
+                                _get_addr_len);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_SRC_LEN,
+                                _get_addr_len);
+        netdev2_test_set_set_cb(&netdevs[i], NETOPT_SRC_LEN,
+                                _set_addr_len);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_NID,
+                                _get_nid);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_PROTO,
+                                _get_proto);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_DEVICE_TYPE,
+                                _get_device_type);
+        netdev2_test_set_get_cb(&netdevs[i], NETOPT_IPV6_IID,
+                                _get_ipv6_iid);
 #ifdef MODULE_GNRC
 #ifdef MODULE_GNRC_SIXLOWPAN
         netdevs[i].netdev.proto = GNRC_NETTYPE_SIXLOWPAN;

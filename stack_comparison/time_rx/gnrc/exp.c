@@ -88,11 +88,8 @@ static inline int min(const int a, const int b);
 
 static void _netdev_isr(netdev2_t *dev)
 {
-    netdev2_test_t *netdev = (netdev2_test_t *)dev;
-    mutex_unlock(&netdev->mutex);
     dev->event_callback(dev, NETDEV2_EVENT_RX_COMPLETE,
                         dev->isr_arg);
-    mutex_lock(&netdev->mutex);
 }
 
 static int _netdev_recv(netdev2_t *dev, char *buf, int len, void *info)

@@ -239,6 +239,7 @@ void exp_run(void)
             for (unsigned i = 0; i < fragments; i++) {
                 netdev->event_callback((netdev2_t *)netdev, NETDEV2_EVENT_ISR,
                                        netdev->isr_arg);
+                thread_yield();
                 mutex_lock(&sync);  /* sync with netdev2 */
 #if EXP_FRAGMENT_DELAY
                 xtimer_usleep(EXP_FRAGMENT_DELAY);

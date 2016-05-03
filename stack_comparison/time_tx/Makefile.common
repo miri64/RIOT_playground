@@ -10,6 +10,7 @@ USEMODULE += inet_csum
 USEMODULE += ipv6_addr
 USEMODULE += netdev2_ieee802154
 USEMODULE += netdev2_test
+USEMODULE += sema
 USEMODULE += xtimer
 
 CFLAGS += -DAPPLICATION_NAME='"$(APPLICATION)"'

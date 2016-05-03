@@ -20,7 +20,7 @@
 
 #include "byteorder.h"
 #include "msg.h"
-#include "mutex.h"
+#include "sema.h"
 #include "net/af.h"
 #include "net/conn/udp.h"
 #include "net/ipv6.h"
@@ -65,7 +65,7 @@ static uint8_t frag_buf[MAX_FRAGMENTS][IEEE802154_MAX_FRAME_SIZE];
 static uint8_t frag_buf_len[MAX_FRAGMENTS];
 static char thread_stack[THREAD_STACK_SIZE];
 static msg_t thread_msg_queue[THREAD_MSG_QUEUE_SIZE];
-static mutex_t sync = MUTEX_INIT;
+static sema_t sync = SEMA_CREATE(0);
 
 static uint16_t payload_size;
 static uint8_t _frag = 0;
@@ -98,7 +98,7 @@ static int _netdev_recv(netdev2_t *dev, char *buf, int len, void *info)
     if (buf != NULL) {
         uint8_t frag;
         if (len < frag_buf_len[_frag]) {
-            mutex_unlock(&sync);
+            sema_post(&sync);   /* signal that fragment was "send" */
             return -ENOBUFS;
         }
         frag = _frag++;
@@ -111,7 +111,7 @@ static int _netdev_recv(netdev2_t *dev, char *buf, int len, void *info)
             radio_info->lqi = 35;
         }
         memcpy(buf, frag_buf[frag], frag_buf_len[frag]);
-        mutex_unlock(&sync);
+        sema_post(&sync);       /* signal that fragment was send */
         return frag_buf_len[frag];
     }
     return frag_buf_len[_frag];
@@ -190,7 +190,6 @@ void exp_run(void)
          payload_size += EXP_PAYLOAD_STEP) {
         bool fragmented = prepare_sixlowpan();
         for (unsigned id = 0; id < EXP_RUNS; id++) {
-            mutex_lock(&sync);
             _id = id;
             size_t offset = IPUDP_LEN;
             unsigned fragments = 0;
@@ -239,18 +238,17 @@ void exp_run(void)
             for (unsigned i = 0; i < fragments; i++) {
                 netdev->event_callback((netdev2_t *)netdev, NETDEV2_EVENT_ISR,
                                        netdev->isr_arg);
-                thread_yield();
-                mutex_lock(&sync);  /* sync with netdev2 */
 #if EXP_FRAGMENT_DELAY
                 xtimer_usleep(EXP_FRAGMENT_DELAY);
 #endif
+                sema_wait(&sync);   /* wait for fragment to be processed by
+                                     * netdev2 */
             }
-            _frag = 0;
 #if EXP_PACKET_DELAY
             xtimer_usleep(EXP_PACKET_DELAY);
 #endif
             reset_frag_buf();
-            mutex_unlock(&sync);
+            _frag = 0;
         }
 #ifdef EXP_STACKTEST
         unsigned stack_size_sum = 0;

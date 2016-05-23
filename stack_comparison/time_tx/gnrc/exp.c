@@ -102,7 +102,17 @@ void exp_run(void)
 #endif
 
 #ifdef EXP_STACKTEST
-    puts("payload_len,stack_size_sum,stack_usage_sum");
+    printf("payload_len,");
+    for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
+        const thread_t *p = (thread_t *)sched_threads[i];
+        if ((p != NULL) &&
+            (strcmp(p->name, "idle") != 0) &&
+            (strcmp(p->name, "main") != 0) &&
+            (strcmp(p->name, "exp_receiver") != 0)) {
+            printf("%s_stack_size,%s_stack_usage", p->name, p->name);
+        }
+    }
+    puts("");
 #else
     puts("payload_len,tx_traversal_time");
 #endif
@@ -123,23 +133,22 @@ void exp_run(void)
             xtimer_usleep(EXP_PACKET_DELAY);
 #endif
         }
-#ifdef EXP_STACKTEST
-        unsigned stack_size_sum = 0;
-        unsigned stack_usage_sum = 0;
-        for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
-            const tcb_t *p = (tcb_t *)sched_threads[i];
-            if ((p != NULL) &&
-                (strcmp(p->name, "idle") != 0) &&
-                (strcmp(p->name, "main") != 0)) {
-                unsigned stacksz = p->stack_size;
-                stack_usage_sum += stacksz;
-                stacksz -= thread_measure_stack_free(p->stack_start);
-                stack_size_sum += stacksz;
-            }
-        }
-        printf("%u,%u,%u\n", payload_size, stack_size_sum, stack_usage_sum);
-#endif
     }
+#ifdef EXP_STACKTEST
+    printf("%u,", payload_size);
+    for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
+        const thread_t *p = (thread_t *)sched_threads[i];
+        if ((p != NULL) &&
+            (strcmp(p->name, "idle") != 0) &&
+            (strcmp(p->name, "main") != 0) &&
+            (strcmp(p->name, "exp_receiver") != 0)) {
+            unsigned stacksz = p->stack_size;
+            printf("%u,", stacksz);
+            stacksz -= thread_measure_stack_free(p->stack_start);
+            printf("%u,", stacksz);
+        }
+    }
+#endif
 }
 
 /** @} */

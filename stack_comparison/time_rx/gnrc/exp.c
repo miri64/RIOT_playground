@@ -182,17 +182,7 @@ void exp_run(void)
     netdev2_test_set_isr_cb(&netdevs[0], _netdev_isr);
     netdev2_test_set_recv_cb(&netdevs[0], _netdev_recv);
 #ifdef EXP_STACKTEST
-    printf("payload_len,");
-    for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
-        const thread_t *p = (thread_t *)sched_threads[i];
-        if ((p != NULL) &&
-            (strcmp(p->name, "idle") != 0) &&
-            (strcmp(p->name, "main") != 0) &&
-            (strcmp(p->name, "exp_receiver") != 0)) {
-            printf("%s_stack_size,%s_stack_usage", p->name, p->name);
-        }
-    }
-    puts("");
+    puts("thread,stack_size,stack_free");
 #else
     puts("payload_len,rx_traversal_time");
 #endif
@@ -262,17 +252,14 @@ void exp_run(void)
         }
     }
 #ifdef EXP_STACKTEST
-    printf("%u,", payload_size);
     for (kernel_pid_t i = 0; i <= KERNEL_PID_LAST; i++) {
         const thread_t *p = (thread_t *)sched_threads[i];
         if ((p != NULL) &&
             (strcmp(p->name, "idle") != 0) &&
             (strcmp(p->name, "main") != 0) &&
             (strcmp(p->name, "exp_receiver") != 0)) {
-            unsigned stacksz = p->stack_size;
-            printf("%u,", stacksz);
-            stacksz -= thread_measure_stack_free(p->stack_start);
-            printf("%u,", stacksz);
+            printf("%s,%u,%u\n", p->name, p->stack_size,
+                   thread_measure_stack_free(p->stack_start));
         }
     }
 #endif

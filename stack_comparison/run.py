@@ -30,11 +30,14 @@ def build(stacktest=False):
         for stack in STACKS:
             if (app[-3:] == 'rpl') and (stack in NON_RPL_STACKS):
                 continue
+            sys.stdout.write("Building %s_%s%s" %
+                             (stack, app, " (stacktest)" if stacktest else ""))
+            sys.stdout.flush()
             make.expect(r"/%s_%s\.elf\s*$" % (stack, app))
-            print("%s_%s build" % (stack, app))
+            print("... done")
     duration = time.time() - start
     make.wait()
-    print("Building took %.2f minutes" % duration / 60.0)
+    print("Building took %.2f minutes" % (duration / 60.0))
 
 def start_exp(site, node, duration, iotlab_exp_name):
     env = os.environ
@@ -44,6 +47,7 @@ def start_exp(site, node, duration, iotlab_exp_name):
                  'IOTLAB_EXP_NAME': str(iotlab_exp_name)})
     make = pexpect.spawn("make -C %s iotlab-exp" % EMPTY_APP_PATH, env=env,
                          timeout=5 * 60)
+    print("Starting experiment")
     make.expect(r"Waiting that experiment (\d+) gets in state Running")
     iotlab_exp_id = int(make.match.group(1))
     make.expect("\"Running\"")

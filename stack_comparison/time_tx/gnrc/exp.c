@@ -106,7 +106,7 @@ void exp_run(void)
 #else
     puts("payload_len,tx_traversal_time");
 #endif
-    for (payload_size = EXP_PAYLOAD_STEP; payload_size <= EXP_MAX_PAYLOAD;
+    for (payload_size = EXP_MIN_PAYLOAD; payload_size <= EXP_MAX_PAYLOAD;
          payload_size += EXP_PAYLOAD_STEP) {
         for (unsigned id = 0; id < EXP_RUNS; id++) {
             for (unsigned j = 0; j < (payload_size - TAIL_LEN); j++) {

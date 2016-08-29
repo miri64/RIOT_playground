@@ -1,8 +1,8 @@
 USEMODULE += emb6_router
 USEMODULE += emb6_conn_udp
 
+include ../Makefile.common
+
 CFLAGS += -DUIP_CONF_BUFFER_SIZE=1332
 CFLAGS += -DQUEUEBUF_CONF_NUM=16
 CFLAGS += -DQUEUEBUF_CONF_REF_NUM=16
-
-include ../Makefile.common

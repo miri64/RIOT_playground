@@ -88,8 +88,7 @@ static inline int min(const int a, const int b);
 
 static void _netdev_isr(netdev2_t *dev)
 {
-    dev->event_callback(dev, NETDEV2_EVENT_RX_COMPLETE,
-                        dev->isr_arg);
+    dev->event_callback(dev, NETDEV2_EVENT_RX_COMPLETE);
 }
 
 static int _netdev_recv(netdev2_t *dev, char *buf, int len, void *info)
@@ -236,8 +235,7 @@ void exp_run(void)
                 fragments = 1;
             }
             for (unsigned i = 0; i < fragments; i++) {
-                netdev->event_callback((netdev2_t *)netdev, NETDEV2_EVENT_ISR,
-                                       netdev->isr_arg);
+                netdev->event_callback((netdev2_t *)netdev, NETDEV2_EVENT_ISR);
 #if EXP_FRAGMENT_DELAY
                 xtimer_usleep(EXP_FRAGMENT_DELAY);
 #endif

@@ -5,11 +5,10 @@ USEMODULE += lwip_netif
 USEMODULE += lwip_sixlowpan
 USEMODULE += lwip_udp
 
+include ../Makefile.common
+
 CFLAGS += -DMEM_SIZE="(THREAD_STACKSIZE_DEFAULT + 3624)"
 CFLAGS += -DPBUF_POOL_BUFSIZE=200
-CFLAGS += -DLWIP_IPV6_MLD=0
 CFLAGS += -DLWIP_IPV6_FRAG=0
 CFLAGS += -DLWIP_IPV6_REASS=0
 CFLAGS += -DLWIP_NETDEV2_BUFLEN=127
-
-include ../Makefile.common

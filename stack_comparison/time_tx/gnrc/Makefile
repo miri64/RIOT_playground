@@ -5,6 +5,7 @@ USEMODULE += gnrc_sixlowpan_iphc_nhc
 USEMODULE += gnrc_sixlowpan_router_default
 USEMODULE += gnrc_udp
 
+include ../Makefile.common
+
 CFLAGS += -DGNRC_PKTBUF_SIZE=1676
 
-include ../Makefile.common

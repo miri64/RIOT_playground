@@ -1,0 +1,12 @@
+APPLICATION := $(shell basename $(CURDIR))_$(shell basename $(realpath $(CURDIR)/..))
+
+BOARD ?= iotlab-m3
+
+RIOTBASE ?= $(CURDIR)/../../../../RIOT
+
+USEMODULE += at86rf231
+USEMODULE += xtimer
+
+QUIET ?= 1
+
+include $(RIOTBASE)/Makefile.include

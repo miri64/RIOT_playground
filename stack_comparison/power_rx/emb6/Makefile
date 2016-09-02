@@ -1,0 +1,1 @@
+../../power_tx/emb6/Makefile

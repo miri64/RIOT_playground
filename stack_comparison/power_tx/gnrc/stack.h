@@ -26,11 +26,10 @@
 extern "C" {
 #endif
 
-#define PORT            1234
+#define UDP_PORT        1234
 #define NUM_PACKETS     100
 
-static const ipv6_addr_t GUA = {{ 0x20, 0x01, 0, 0, 0, 0, 0, 0,
-                                  0, 0, 0, 0, 0, 0, 0, 1}};
+extern ipv6_addr_t dst;
 
 void stack_init(void);
 

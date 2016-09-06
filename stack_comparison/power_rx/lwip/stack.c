@@ -22,13 +22,15 @@
 
 #include "stack.h"
 
+ipv6_addr_t dst = {{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }};
+
 void stack_init(void)
 {
     bool state = 1;
     netdev2_t *dev = (netdev2_t *)netif_default->state;
 
     dev->driver->set(dev, NETOPT_RX_END_IRQ, &state, sizeof(state));
-    netif_add_ip6_address(netif_default, (const ip6_addr_t *)&GUA, NULL);
 }
 
 /** @} */

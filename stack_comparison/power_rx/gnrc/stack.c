@@ -21,23 +21,30 @@
 
 #include "stack.h"
 
+#ifdef RPL_STACK
+ipv6_addr_t dst = {{ 0x20, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }};
+#else
+ipv6_addr_t dst = {{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }};
+#endif
 
 void stack_init(void)
 {
     bool state = 1;
-    ipv6_addr_t dodag_id;
 
     kernel_pid_t ifs[GNRC_NETIF_NUMOF];
     gnrc_netif_get(ifs);
 
     gnrc_netapi_set(ifs[0], NETOPT_RX_END_IRQ, 0, &state,
                     sizeof(state));
+#ifdef RPL_STACK
     gnrc_rpl_init(ifs[0]);
 
-    gnrc_ipv6_netif_add_addr(ifs[0], &GUA, 64, 0);
+    gnrc_ipv6_netif_add_addr(ifs[0], &dst, 64, 0);
 
-    memcpy(&dodag_id, &GUA, sizeof(dodag_id));
-    gnrc_rpl_root_init(1, &dodag_id, false, false);
+    gnrc_rpl_root_init(1, &dst, false, false);
+#endif
 }
 
 /** @} */

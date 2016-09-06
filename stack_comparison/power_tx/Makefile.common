@@ -4,9 +4,13 @@ BOARD ?= iotlab-m3
 
 RIOTBASE ?= $(CURDIR)/../../../../RIOT
 
+RPL_STACK ?= 0
+
 USEMODULE += at86rf231
 USEMODULE += xtimer
 
-QUIET ?= 1
+ifeq (1,$(RPL_STACK))
+  CFLAGS += -DRPL_STACK
+endif
 
 include $(RIOTBASE)/Makefile.include

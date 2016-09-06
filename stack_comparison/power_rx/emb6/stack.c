@@ -29,6 +29,13 @@
 #define EMB6_PRIO       (THREAD_PRIORITY_MAIN - 3)
 #define EMB6_DELAY      (58)
 
+#ifdef RPL_STACK
+ipv6_addr_t dst = {{ 0x20, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }};
+#else
+ipv6_addr_t dst = {{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }};
+#endif
 
 static s_ns_t emb6 = {
     .hc = &sicslowpan_driver,
@@ -50,17 +57,18 @@ static void *_emb6_thread(void *args)
 
 void stack_init(void)
 {
-    uip_ipaddr_t addr;
     netdev2_t *netdev = (netdev2_t *)&dev;
 
     at86rf2xx_setup(&dev, &at86rf2xx_params[0]);
     netdev->driver->init(netdev);
     emb6_netdev2_setup(netdev);
     emb6_init(&emb6);
+#ifdef RPL_STACK
     rpl_init();
-    memcpy(&addr, &GUA, sizeof(ipv6_addr_t));
+    memcpy(&addr, &dst, sizeof(ipv6_addr_t));
     uip_ds6_addr_add((uip_ipaddr_t *)&addr, 0, ADDR_MANUAL);
-    rpl_set_root(0, &addr);
+    rpl_set_root(0, &dst);
+#endif
     thread_create(emb6_stack, sizeof(emb6_stack), EMB6_PRIO,
                   THREAD_CREATE_STACKTEST, _emb6_thread, NULL, "emb6");
 }

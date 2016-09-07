@@ -65,9 +65,8 @@ void stack_init(void)
     emb6_init(&emb6);
 #ifdef RPL_STACK
     rpl_init();
-    memcpy(&addr, &dst, sizeof(ipv6_addr_t));
-    uip_ds6_addr_add((uip_ipaddr_t *)&addr, 0, ADDR_MANUAL);
-    rpl_set_root(0, &dst);
+    uip_ds6_addr_add((uip_ipaddr_t *)&dst, 0, ADDR_MANUAL);
+    rpl_set_root(0, (uip_ipaddr_t *)&dst);
 #endif
     thread_create(emb6_stack, sizeof(emb6_stack), EMB6_PRIO,
                   THREAD_CREATE_STACKTEST, _emb6_thread, NULL, "emb6");

@@ -58,12 +58,16 @@ static void *_emb6_thread(void *args)
 void stack_init(void)
 {
     netdev2_t *netdev = (netdev2_t *)&dev;
-
     at86rf2xx_setup(&dev, &at86rf2xx_params[0]);
     netdev->driver->init(netdev);
     emb6_netdev2_setup(netdev);
     emb6_init(&emb6);
 #ifdef RPL_STACK
+    ipv6_addr_t src = {{ 0 }};
+    src.u8[0] = 0x20;
+    src.u8[1] = 0x01;
+    src.u8[15] = 0x02;
+    uip_ds6_addr_add((uip_ipaddr_t *)&src, 0, ADDR_MANUAL);
     rpl_init();
 #endif
     thread_create(emb6_stack, sizeof(emb6_stack), EMB6_PRIO,

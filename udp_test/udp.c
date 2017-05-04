@@ -32,8 +32,9 @@
 #define SERVER_MSG_QUEUE_SIZE   (8U)
 #define SERVER_PRIO             (THREAD_PRIORITY_MAIN - 1)
 #define SERVER_STACKSIZE        (THREAD_STACKSIZE_MAIN)
+#define SERVER_RESET            (0x8fae)
 
-static gnrc_netreg_entry_t server = { NULL, GNRC_NETREG_DEMUX_CTX_ALL, KERNEL_PID_UNDEF };
+static gnrc_netreg_entry_t server = GNRC_NETREG_ENTRY_INIT_PID(0, KERNEL_PID_UNDEF);
 
 static char server_stack[SERVER_STACKSIZE];
 static msg_t server_queue[SERVER_MSG_QUEUE_SIZE];
@@ -44,7 +45,7 @@ static void *_eventloop(void *arg)
 {
     (void)arg;
     msg_t msg, reply;
-    unsigned int rcv_count = 0, snd_count = 0;
+    unsigned int rcv_count = 0;
 
     /* setup the message queue */
     msg_init_queue(server_queue, SERVER_MSG_QUEUE_SIZE);
@@ -60,13 +61,12 @@ static void *_eventloop(void *arg)
                 printf("Packets received: %d\n", ++rcv_count);
                 gnrc_pktbuf_release((gnrc_pktsnip_t *)msg.content.ptr);
                 break;
-            case GNRC_NETAPI_MSG_TYPE_SND:
-                printf("Packets send: %d\n", ++snd_count);
-                gnrc_pktbuf_release((gnrc_pktsnip_t *)msg.content.ptr);
-                break;
             case GNRC_NETAPI_MSG_TYPE_GET:
             case GNRC_NETAPI_MSG_TYPE_SET:
                 msg_reply(&msg, &reply);
+                break;
+            case SERVER_RESET:
+                rcv_count = 0;
                 break;
             default:
                 break;
@@ -144,7 +144,7 @@ static void start_server(char *port_str)
     uint16_t port;
 
     /* check if server is already running */
-    if (server.pid != KERNEL_PID_UNDEF) {
+    if (server.target.pid != KERNEL_PID_UNDEF) {
         printf("Error: server already running on port %" PRIu32 "\n",
                server.demux_ctx);
         return;
@@ -164,29 +164,31 @@ static void start_server(char *port_str)
         }
     }
     /* start server (which means registering pktdump for the chosen port) */
-    server.pid = server_pid;
-    server.demux_ctx = (uint32_t)port;
+    gnrc_netreg_entry_init_pid(&server, port, server_pid);
     gnrc_netreg_register(GNRC_NETTYPE_UDP, &server);
     printf("Success: started UDP server on port %" PRIu16 "\n", port);
 }
 
 static void stop_server(void)
 {
+    msg_t msg = { .type = SERVER_RESET };
     /* check if server is running at all */
-    if (server.pid == KERNEL_PID_UNDEF) {
+    if (server.target.pid == KERNEL_PID_UNDEF) {
         printf("Error: server was not running\n");
         return;
     }
+    /* reset server state */
+    msg_send(&msg, server.target.pid);
     /* stop server */
     gnrc_netreg_unregister(GNRC_NETTYPE_UDP, &server);
-    server.pid = KERNEL_PID_UNDEF;
+    gnrc_netreg_entry_init_pid(&server, 0, KERNEL_PID_UNDEF);
     puts("Success: stopped UDP server");
 }
 
 int udp_cmd(int argc, char **argv)
 {
     if (argc < 2) {
-        printf("usage: %s [send|server]\n", argv[0]);
+        printf("usage: %s [send|server|reset]\n", argv[0]);
         return 1;
     }
 
@@ -194,7 +196,7 @@ int udp_cmd(int argc, char **argv)
         uint32_t num = 1;
         uint32_t delay = 1000000;
         if (argc < 5) {
-            printf("usage: %s send <addr> <port> <data> [<num> [<delay in us>]]\n",
+            printf("usage: %s send <addr> <port> <bytes> [<num> [<delay in us>]]\n",
                    argv[0]);
             return 1;
         }
@@ -223,6 +225,12 @@ int udp_cmd(int argc, char **argv)
         }
         else {
             puts("error: invalid command");
+        }
+    }
+    else if (strcmp(argv[1], "reset") == 0) {
+        if (server_pid > KERNEL_PID_UNDEF) {
+            msg_t msg = { .type = SERVER_RESET };
+            msg_send(&msg, server_pid);
         }
     }
     else {

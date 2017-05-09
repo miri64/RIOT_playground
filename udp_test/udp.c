@@ -39,7 +39,7 @@ static gnrc_netreg_entry_t server = GNRC_NETREG_ENTRY_INIT_PID(0, KERNEL_PID_UND
 static char server_stack[SERVER_STACKSIZE];
 static msg_t server_queue[SERVER_MSG_QUEUE_SIZE];
 static kernel_pid_t server_pid = KERNEL_PID_UNDEF;
-static uint8_t send_count = (uint8_t)'0';
+static uint8_t send_count = 0;
 
 static void *_eventloop(void *arg)
 {
@@ -231,6 +231,7 @@ int udp_cmd(int argc, char **argv)
         if (server_pid > KERNEL_PID_UNDEF) {
             msg_t msg = { .type = SERVER_RESET };
             msg_send(&msg, server_pid);
+            send_count = (uint8_t)0;
         }
     }
     else {

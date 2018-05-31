@@ -10,6 +10,8 @@ USEMODULE += xtimer
 USEMODULE += gcoap
 USEMODULE += gnrc_ipv6_default
 
+FEATURES_REQUIRED += periph_gpio
+
 DEVELHELP ?= 0
 QUIET ?= 1
 

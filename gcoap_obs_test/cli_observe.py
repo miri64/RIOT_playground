@@ -42,6 +42,8 @@ async def subscribe(addr, timeout):
             pr = protocol.request(request)
             r = await asyncio.wait_for(pr.response, timeout=TIMEOUT)
             print("First result for %s: %s\n\t%r" % (uri, r.code, r.payload))
+            # don't use for loop to iteratie over observation, to be able to
+            # timeout notifications
             iterator = pr.observation.__aiter__()
             while True:
                 r = await asyncio.wait_for(iterator.__anext__(),

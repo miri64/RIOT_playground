@@ -42,8 +42,8 @@
 #define LUKE_POINT_PATH             "/luke/points"
 
 #define LUKE_START_VALUE            (0U)
-#define LUKE_POINT_DROP_VALUE       (5U)
-#define LUKE_POINT_DROP_TIMEOUT     (3U * US_PER_SEC)
+#define LUKE_POINT_DROP_VALUE       (4U)
+#define LUKE_POINT_DROP_TIMEOUT     (2U * US_PER_SEC)
 
 static ssize_t _post_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
@@ -148,7 +148,6 @@ int main(void)
     lpd8808_load_rgb(&_dev, _leds);
     gcoap_register_listener(&_listener);
     _init_iface();
-    (void)_decrement_points;
     while (1) {
         _decrement_points(LUKE_POINT_DROP_VALUE);
         xtimer_periodic_wakeup(&now, LUKE_POINT_DROP_TIMEOUT);

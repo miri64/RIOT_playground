@@ -30,7 +30,7 @@
 #define LUKE_SEND_TIMEOUT           (1U * US_PER_SEC)
 
 #ifndef LUKE_BUTTON
-#define LUKE_BUTTON                 GPIO_PIN(PA, 6)
+#define LUKE_BUTTON                 GPIO_PIN(PA, 7)
 #endif
 #define LUKE_DEBOUNCE_INTERVAL      (10U * MS_PER_SEC)
 
@@ -156,7 +156,7 @@ static void _init_remote(void)
 
 int main(void)
 {
-    gpio_init_int(LUKE_BUTTON, GPIO_IN, GPIO_RISING, _increment_counter,
+    gpio_init_int(LUKE_BUTTON, GPIO_IN_PU, GPIO_FALLING, _increment_counter,
                   (void *)LUKE_BUTTON);
     _init_remote();
     _client();

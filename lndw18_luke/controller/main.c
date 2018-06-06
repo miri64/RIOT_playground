@@ -27,7 +27,7 @@
 #include "shell.h"
 
 #define LUKE_MSG_TYPE_SEND_POINTS   (0x4d41)
-#define LUKE_SEND_TIMEOUT           (1U * US_PER_SEC)
+#define LUKE_SEND_TIMEOUT           (100U * US_PER_MS)
 
 #ifndef LUKE_BUTTON
 #define LUKE_BUTTON                 GPIO_PIN(PA, 7)
@@ -115,7 +115,7 @@ static void _client(void)
             counter = atomic_exchange(&_counter, LUKE_START_VALUE);
             _schedule_next_send();
             res = snprintf(payload, sizeof(payload), LUKE_PAYLOAD_FMT,
-                           counter / 5);
+                           counter);
             if (res > 0) {
                 printf("Posting payload %s\n", payload);
                 _post(payload, (size_t)res);

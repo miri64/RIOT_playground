@@ -42,13 +42,18 @@
 #define LUKE_POINT_PATH             "/luke/points"
 
 #define LUKE_START_VALUE            (0U)
-#define LUKE_POINT_DROP_VALUE       (4U)
-#define LUKE_POINT_DROP_TIMEOUT     (2U * US_PER_SEC)
+#define LUKE_POINTS_PER_LED         (1U)
+#define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
+#define LUKE_POINT_DROP_VALUE       (2U)
+#define LUKE_POINT_DROP_TIMEOUT     (200U * US_PER_MS)
+
+#define LUKE_HUE_MAX                (120.0)
 
 static ssize_t _post_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
 
 static lpd8808_t _dev;
+static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
     { LUKE_POINT_PATH, COAP_POST, _post_points, NULL },
@@ -59,18 +64,13 @@ static gcoap_listener_t _listener = {
     NULL
 };
 static mutex_t _points_mutex = MUTEX_INIT;
-static const color_rgb_t _color = { 0, 255, 0 };
-static uint8_t _points = 0U;
+static uint16_t _points = 64U;
 
 static void _display_points(void)
 {
-    for (int i = 0; i < LPD8808_PARAM_LED_CNT; i++) {
-        if (i < _points) {
-            memcpy(&_leds[i], &_color, sizeof(_leds[i]));
-        }
-        else {
-            memset(&_leds[i], 0, sizeof(_leds[i]));
-        }
+    memset(&_leds[0], 0, sizeof(_leds));
+    for (unsigned i = 0; i < (_points / LUKE_POINTS_PER_LED); i++) {
+        memcpy(&_leds[i], &_color_map[i], sizeof(_leds[i]));
     }
     lpd8808_load_rgb(&_dev, _leds);
 }
@@ -79,8 +79,9 @@ static void _increment_points(int p)
 {
     mutex_lock(&_points_mutex);
     printf("increment by %i\n", _points);
-    _points = ((_points + p) > LPD8808_PARAM_LED_CNT) ?
-              LPD8808_PARAM_LED_CNT : (uint8_t)(_points + p);
+    _points = ((_points + (unsigned)p) > LUKE_POINTS_MAX) ?
+              (LUKE_POINTS_MAX) :
+              (uint8_t)(_points + p);
     printf("incremented to %u\n", _points);
     _display_points();
     mutex_unlock(&_points_mutex);
@@ -140,6 +141,24 @@ static void _init_iface(void)
                                                    sizeof(addr_str)));
 }
 
+static void _init_color_map(void)
+{
+    for (unsigned i = 0; i < LPD8808_PARAM_LED_CNT; i++) {
+        color_hsv_t color_hsv = {
+            .h = i * (LUKE_HUE_MAX / LUKE_POINTS_MAX),
+            .s = 1.0,
+            .v = 1.0,
+        };
+        uint8_t tmp;
+
+        color_hsv2rgb(&color_hsv, &_color_map[i]);
+        /* green and blue are switched */
+        tmp = _color_map[i].g;
+        _color_map[i].g = _color_map[i].b;
+        _color_map[i].b = tmp;
+    }
+}
+
 int main(void)
 {
     xtimer_ticks32_t now = xtimer_now();
@@ -148,6 +167,7 @@ int main(void)
     lpd8808_load_rgb(&_dev, _leds);
     gcoap_register_listener(&_listener);
     _init_iface();
+    _init_color_map();
     while (1) {
         _decrement_points(LUKE_POINT_DROP_VALUE);
         xtimer_periodic_wakeup(&now, LUKE_POINT_DROP_TIMEOUT);

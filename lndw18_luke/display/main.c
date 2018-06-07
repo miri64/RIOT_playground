@@ -49,14 +49,14 @@
 
 #define LUKE_HUE_MAX                (120.0)
 
-static ssize_t _post_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
 
 static lpd8808_t _dev;
 static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
-    { LUKE_POINT_PATH, COAP_POST, _post_points, NULL },
+    { LUKE_POINT_PATH, COAP_POST | COAP_GET, _luke_points, NULL },
 };
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],
@@ -65,6 +65,29 @@ static gcoap_listener_t _listener = {
 };
 static mutex_t _points_mutex = MUTEX_INIT;
 static uint16_t _points = 64U;
+static uint16_t _last_notified;
+
+static void _notify_points(void)
+{
+    uint8_t buf[GCOAP_PDU_BUF_SIZE];
+    coap_pkt_t pdu;
+
+    /* send Observe notification for /luke/points */
+    switch (gcoap_obs_init(&pdu, &buf[0], GCOAP_PDU_BUF_SIZE,
+            &_resources[0])) {
+        case GCOAP_OBS_INIT_OK: {
+            size_t payload_len = sprintf((char *)pdu.payload, LUKE_PAYLOAD_FMT,
+                                         _points);
+            size_t len;
+
+            len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
+            gcoap_obs_send(&buf[0], len, &_resources[0]);
+            break;
+        }
+        default:
+            break;
+    }
+}
 
 static void _display_points(void)
 {
@@ -73,6 +96,10 @@ static void _display_points(void)
         memcpy(&_leds[i], &_color_map[i], sizeof(_leds[i]));
     }
     lpd8808_load_rgb(&_dev, _leds);
+    if (_last_notified != _points) {
+        _notify_points();
+        _last_notified = _points;
+    }
 }
 
 static void _increment_points(int p)
@@ -97,30 +124,45 @@ static void _decrement_points(int p)
     mutex_unlock(&_points_mutex);
 }
 
-static ssize_t _post_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx)
 {
     unsigned p = 0;
     unsigned code;
 
     (void)ctx;
-    printf("POST %s\n", (char *)pdu->url);
-    if ((pdu->payload_len < LUKE_PAYLOAD_MIN_SIZE) ||
-        (pdu->payload_len > LUKE_PAYLOAD_MAX_SIZE) ||
-        (pdu->content_type != COAP_FORMAT_JSON) ||
-        (sscanf((char *)pdu->payload, LUKE_PAYLOAD_FMT, &p) != 1)) {
-        printf("(%u < %u) || (%u > %u) || (%u != %u) || "
-               "(payload unparsable)\n", pdu->payload_len,
-               LUKE_PAYLOAD_MIN_SIZE, pdu->payload_len, LUKE_PAYLOAD_MAX_SIZE,
-               pdu->content_type, COAP_FORMAT_JSON);
-        code = COAP_CODE_BAD_REQUEST;
+    switch (coap_method2flag(coap_get_code_detail(pdu))) {
+        case COAP_GET: {
+            size_t payload_len;
+
+            gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+            mutex_lock(&_points_mutex);
+            payload_len = sprintf((char *)pdu->payload, LUKE_PAYLOAD_FMT,
+                                  _points);
+            mutex_unlock(&_points_mutex);
+            return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
+        }
+        case COAP_POST:
+            printf("POST %s\n", (char *)pdu->url);
+            if ((pdu->payload_len < LUKE_PAYLOAD_MIN_SIZE) ||
+                (pdu->payload_len > LUKE_PAYLOAD_MAX_SIZE) ||
+                (pdu->content_type != COAP_FORMAT_JSON) ||
+                (sscanf((char *)pdu->payload, LUKE_PAYLOAD_FMT, &p) != 1)) {
+                printf("(%u < %u) || (%u > %u) || (%u != %u) || "
+                       "(payload unparsable)\n", pdu->payload_len,
+                       LUKE_PAYLOAD_MIN_SIZE, pdu->payload_len, LUKE_PAYLOAD_MAX_SIZE,
+                       pdu->content_type, COAP_FORMAT_JSON);
+                code = COAP_CODE_BAD_REQUEST;
+            }
+            else {
+                code = COAP_CODE_VALID;
+                _increment_points(p);
+            }
+            puts("Sending response");
+            return gcoap_response(pdu, buf, len, code);
+        default:
+            return 0;
     }
-    else {
-        code = COAP_CODE_VALID;
-        _increment_points(p);
-    }
-    puts("Sending response");
-    return gcoap_response(pdu, buf, len, code);
 }
 
 static void _init_iface(void)

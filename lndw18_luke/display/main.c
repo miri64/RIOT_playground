@@ -44,7 +44,7 @@
 #define LUKE_START_VALUE            (0U)
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
-#define LUKE_POINT_DROP_VALUE       (2U)
+#define LUKE_POINT_DROP_VALUE       (1U)
 #define LUKE_POINT_DROP_TIMEOUT     (200U * US_PER_MS)
 
 #define LUKE_HUE_MAX                (120.0)

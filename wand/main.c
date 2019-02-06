@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <time.h>
 
+#include "led.h"
+
 #include "periph/adc.h"
 #include "periph/gpio.h"
 #include "periph/rtc.h"
@@ -265,6 +267,7 @@ static void _timeout(void *arg, int channel);
 
 int main(void)
 {
+    LED0_OFF;
     _main_pid = sched_active_pid;
     rtc_init();
     adc_init(BATTERY);

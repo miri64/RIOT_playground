@@ -180,6 +180,12 @@ static void _btn_time_push(void *arg);
  */
 static void _btn_time_release(void *arg);
 /**
+ * @brief   Return from "power bar event" when releasing the button
+ *
+ * @param[in] arg   Argument for GPIO handler
+ */
+static void _show_power_off(void *arg);
+/**
  * @brief   Handler for "power bar event"
  *
  * Shows the power supply on time LEDs as a "bar".
@@ -362,9 +368,19 @@ static void _btn_time_release(void *arg)
     gpio_init_int(BTN_TIME, GPIO_IN_PU, GPIO_FALLING, _btn_time_push, NULL);
 }
 
+static void _show_power_off(void *arg)
+{
+    (void)arg;
+    _turn_off_time_display();
+    /* re-register button for pushing */
+    gpio_init_int(BTN_LIGHT, GPIO_IN_PU, GPIO_FALLING, _btn_light_push, NULL);
+}
+
 static void _show_power(void)
 {
     int permillage;
+    /* register for button release to turn power display off again */
+    gpio_init_int(BTN_LIGHT, GPIO_IN_PU, GPIO_RISING, _show_power_off, NULL);
     /* get battery voltage */
     int batv = adc_sample(BATTERY, BATTERY_RES);
 

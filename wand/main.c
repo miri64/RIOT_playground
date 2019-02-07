@@ -487,7 +487,9 @@ static void _time_get(void)
 {
     rtc_get_time(&_time);
     _cur_hour = _time.tm_hour % HOUR_MAX;
-    _cur_quarter = (_time.tm_min / (60 / QUARTER_MAX));
+    /* get higher precision by multiplying and then dividing again by 10.
+     * Otherwise we lose 4 min per hour ;-) */
+    _cur_quarter = ((_time.tm_min * 10) / (600 / QUARTER_MAX));
 }
 
 static inline int _in_set_time_mode(void)
@@ -634,8 +636,14 @@ static void _timeout(void *arg, int channel)
 static void _time_set(void)
 {
     _time.tm_hour = _cur_hour;
-    _time.tm_min = _cur_quarter * (60 / QUARTER_MAX);
+    /* get higher precision by multiplying and then dividing again by 10. */
+    _time.tm_min = (_cur_quarter * (600 / QUARTER_MAX)) / 10;
     _time.tm_sec = 0;
 
+    /* fix rounding error caused by the fact that _cur_quarter is in steps of
+     * 7.5 minutes */
+    if (_cur_quarter % 2) {
+        _time.tm_min++;
+    }
     rtc_set_time(&_time);
 }

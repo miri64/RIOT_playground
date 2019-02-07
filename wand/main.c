@@ -406,16 +406,16 @@ static void _show_power(void)
     }
     /* turn on LEDs according to permillage; use red LEDs for lower 50% */
     if (permillage >= 125) {
-        gpio_set(_time_array[4]);
+        gpio_set(_time_array[7]);
     }
     if (permillage >= 250) {
-        gpio_set(_time_array[5]);
-    }
-    if (permillage >= 375) {
         gpio_set(_time_array[6]);
     }
+    if (permillage >= 375) {
+        gpio_set(_time_array[5]);
+    }
     if (permillage >= 500) {
-        gpio_set(_time_array[7]);
+        gpio_set(_time_array[4]);
     }
     if (permillage >= 625) {
         gpio_set(_time_array[0]);

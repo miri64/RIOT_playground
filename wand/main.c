@@ -512,7 +512,7 @@ static void _decrement(void *arg)
     _show_time(gpio_set);
     _blinking = 0;
     timer_clear(TIMER_DEV(1), 0);
-    timer_set(TIMER_DEV(1), POWER_BAR_CHANNEL, SET_TIME_TIMEOUT);
+    timer_set(TIMER_DEV(1), POWER_BAR_CHANNEL, SET_TIME_TIMEOUT / 2);
 }
 
 static void _do_decrement(void *arg)
@@ -551,7 +551,7 @@ static void _increment(void *arg)
     _show_time(gpio_set);
     _blinking = 0;
     timer_clear(TIMER_DEV(1), 0);
-    timer_set(TIMER_DEV(1), SET_TIME_CHANNEL, SET_TIME_TIMEOUT);
+    timer_set(TIMER_DEV(1), SET_TIME_CHANNEL, SET_TIME_TIMEOUT / 2);
 }
 
 static void _do_increment(void *arg)

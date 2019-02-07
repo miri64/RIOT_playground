@@ -272,6 +272,9 @@ int main(void)
     rtc_init();
     adc_init(BATTERY);
     gpio_init(LED_LIGHT, GPIO_OUT);
+    for (unsigned i = 0; i < TIME_LEDS_NUMOF; i++) {
+        gpio_init(_time_array[i], GPIO_OUT);
+    }
     timer_init(TIMER_DEV(1), TIMER_FREQ, _timeout, NULL);
     _init_normal_mode();
     return 0;

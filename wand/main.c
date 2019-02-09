@@ -433,7 +433,7 @@ static void _show_power(void)
 
 static uint8_t _time_encode(uint8_t hour, uint8_t quarter)
 {
-    uint8_t res;
+    uint8_t res = 0;
 
     if (!hour) {
         hour = HOUR_MAX;

@@ -46,13 +46,13 @@
  */
 /* Green LEDs for minutes ("half-quarter" hours) */
 #ifndef LED_MINUTE_YELLOW
-#define LED_MINUTE_YELLOW   (GPIO_PIN(PA, 3))       /* A0 on Feather-M0 */
+#define LED_MINUTE_YELLOW   (GPIO_PIN(PA, 2))       /* A0 on Feather-M0 */
 #endif
 #ifndef LED_MINUTE_GREEN
-#define LED_MINUTE_GREEN    (GPIO_PIN(PA, 8))       /* A1 on Feather-M0 */
+#define LED_MINUTE_GREEN    (GPIO_PIN(PB, 8))       /* A1 on Feather-M0 */
 #endif
 #ifndef LED_MINUTE_BLUE
-#define LED_MINUTE_BLUE     (GPIO_PIN(PA, 9))       /* A2 on Feather-M0 */
+#define LED_MINUTE_BLUE     (GPIO_PIN(PB, 9))       /* A2 on Feather-M0 */
 #endif
 #ifndef LED_MINUTE_GRAY
 #define LED_MINUTE_GRAY     (GPIO_PIN(PA, 4))       /* A3 on Feather-M0 */
@@ -65,10 +65,10 @@
 #define LED_HOUR_PURPLE     (GPIO_PIN(PB, 2))       /* A5 on Feather-M0 */
 #endif
 #ifndef LED_HOUR_RED
-#define LED_HOUR_RED        (GPIO_PIN(PA, 11))      /* SCK on Feather-M0 */
+#define LED_HOUR_RED        (GPIO_PIN(PB, 11))      /* SCK on Feather-M0 */
 #endif
 #ifndef LED_HOUR_ORANGE
-#define LED_HOUR_ORANGE     (GPIO_PIN(PA, 10))      /* MOSI on Feather-M0 */
+#define LED_HOUR_ORANGE     (GPIO_PIN(PB, 10))      /* MOSI on Feather-M0 */
 #endif
 /** @} */
 

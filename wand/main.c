@@ -486,7 +486,7 @@ static void _turn_off_time_display(void)
 static void _time_get(void)
 {
     rtc_get_time(&_time);
-    _cur_hour = _time.tm_hour % HOUR_MAX;
+    _cur_hour = (_time.tm_hour / 2) % HOUR_MAX;
     /* get higher precision by multiplying and then dividing again by 10.
      * Otherwise we lose 4 min per hour ;-) */
     _cur_quarter = ((_time.tm_min * 10) / (600 / QUARTER_MAX));

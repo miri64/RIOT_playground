@@ -129,8 +129,8 @@ static const gpio_t _time_array[] = {
     LED_MINUTE_BLUE,
     LED_MINUTE_GRAY,
     LED_HOUR_BROWN,
-    LED_HOUR_PURPLE,
     LED_HOUR_RED,
+    LED_HOUR_PURPLE,
     LED_HOUR_ORANGE,
 };
 

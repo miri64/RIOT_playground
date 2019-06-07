@@ -13,8 +13,6 @@
  * @author  Martine Lenders <m.lenders@fu-berlin.de>
  */
 
-#include <stdatomic.h>
-
 #include "color.h"
 #include "mutex.h"
 #include "net/gcoap.h"
@@ -41,7 +39,6 @@
 #define LUKE_PAYLOAD_MAX_SIZE       (sizeof("{\"points\":255}") - 1)
 #define LUKE_POINT_PATH             "/luke/points"
 
-#define LUKE_START_VALUE            (0U)
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
 #define LUKE_POINT_DROP_VALUE       (2U)

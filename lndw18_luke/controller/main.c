@@ -30,7 +30,7 @@
 #define LUKE_SEND_TIMEOUT           (100U * US_PER_MS)
 
 #ifndef LUKE_BUTTON
-#define LUKE_BUTTON                 GPIO_PIN(PA, 7)
+#define LUKE_BUTTON                 GPIO_PIN(PB, 2)
 #endif
 #define LUKE_DEBOUNCE_INTERVAL      (10U * MS_PER_SEC)
 

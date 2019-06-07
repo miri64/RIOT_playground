@@ -14,6 +14,7 @@
  */
 
 #include "color.h"
+#include "led.h"
 #include "mutex.h"
 #include "net/gcoap.h"
 #include "net/gnrc/netif.h"
@@ -45,6 +46,9 @@
 #define LUKE_POINT_DROP_VALUE       (2U)
 #define LUKE_POINT_DROP_TIMEOUT     (200U * US_PER_MS)
 
+#define LUKE_VICTORY_COND               (5U)
+#define LUKE_VICTORY_RESET_THRESHOLD    (3U)
+
 #define LUKE_HUE_MAX                (120.0)
 
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
@@ -66,6 +70,7 @@ static gcoap_listener_t _listener = {
 static mutex_t _points_mutex = MUTEX_INIT;
 static uint16_t _points = 64U;
 static uint16_t _last_notified;
+static uint8_t _in_victory_cond = 0U;
 
 static void _notify_points(void)
 {
@@ -104,11 +109,18 @@ static void _display_points(void)
 
 static void _increment_points(int p)
 {
+    uint16_t new_points;
+
     mutex_lock(&_points_mutex);
+    new_points = _points + p;
     printf("increment by %i\n", p);
-    _points = ((_points + (unsigned)p) > LUKE_POINTS_MAX) ?
-              (LUKE_POINTS_MAX) :
-              (uint8_t)(_points + p);
+    if (new_points > LUKE_POINTS_MAX) {
+        _points = LUKE_POINTS_MAX;
+        _in_victory_cond++;
+    }
+    else {
+        _points = new_points;
+    }
     printf("incremented to %u\n", _points);
     _display_points();
     mutex_unlock(&_points_mutex);
@@ -119,6 +131,9 @@ static void _decrement_points(int p)
     mutex_lock(&_points_mutex);
     printf("decrement by %i\n", p);
     _points = (((unsigned)p > _points)) ? 0U : (uint8_t)(_points - p);
+    if (_points < (LUKE_POINTS_MAX - LUKE_VICTORY_RESET_THRESHOLD)) {
+        _in_victory_cond = 0;
+    }
     printf("decremented to %u\n", _points);
     _display_points();
     mutex_unlock(&_points_mutex);
@@ -211,6 +226,13 @@ int main(void)
     _init_iface();
     _init_color_map();
     while (1) {
+        if (_in_victory_cond < LUKE_VICTORY_COND) {
+            LED0_ON;
+            /* TODO make a victory POST */
+        }
+        else {
+            LED0_OFF;
+        }
         _decrement_points(LUKE_POINT_DROP_VALUE);
         xtimer_periodic_wakeup(&now, LUKE_POINT_DROP_TIMEOUT);
     }

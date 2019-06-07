@@ -105,7 +105,7 @@ static void _display_points(void)
 static void _increment_points(int p)
 {
     mutex_lock(&_points_mutex);
-    printf("increment by %i\n", _points);
+    printf("increment by %i\n", p);
     _points = ((_points + (unsigned)p) > LUKE_POINTS_MAX) ?
               (LUKE_POINTS_MAX) :
               (uint8_t)(_points + p);
@@ -117,7 +117,7 @@ static void _increment_points(int p)
 static void _decrement_points(int p)
 {
     mutex_lock(&_points_mutex);
-    printf("decrement by %i\n", _points);
+    printf("decrement by %i\n", p);
     _points = (((unsigned)p > _points)) ? 0U : (uint8_t)(_points - p);
     printf("decremented to %u\n", _points);
     _display_points();

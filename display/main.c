@@ -157,16 +157,16 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
             mutex_unlock(&_points_mutex);
             return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
         }
-        case COAP_POST:
-            printf("POST %s\n", (char *)pdu->url);
+        case COAP_POST: {
+            unsigned content_type = coap_get_content_type(pdu);
             if ((pdu->payload_len < LUKE_PAYLOAD_MIN_SIZE) ||
                 (pdu->payload_len > LUKE_PAYLOAD_MAX_SIZE) ||
-                (pdu->content_type != COAP_FORMAT_JSON) ||
+                (content_type != COAP_FORMAT_JSON) ||
                 (sscanf((char *)pdu->payload, LUKE_PAYLOAD_FMT, &p) != 1)) {
                 printf("(%u < %u) || (%u > %u) || (%u != %u) || "
                        "(payload unparsable)\n", pdu->payload_len,
                        LUKE_PAYLOAD_MIN_SIZE, pdu->payload_len, LUKE_PAYLOAD_MAX_SIZE,
-                       pdu->content_type, COAP_FORMAT_JSON);
+                       content_type, COAP_FORMAT_JSON);
                 code = COAP_CODE_BAD_REQUEST;
             }
             else {

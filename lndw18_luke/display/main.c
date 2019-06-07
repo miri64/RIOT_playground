@@ -37,7 +37,8 @@
 #define LUKE_PAYLOAD_FMT            "{\"points\":%u}"
 #define LUKE_PAYLOAD_MIN_SIZE       (sizeof("{\"points\":0}") - 1)
 #define LUKE_PAYLOAD_MAX_SIZE       (sizeof("{\"points\":255}") - 1)
-#define LUKE_POINT_PATH             "/luke/points"
+
+#define LUKE_PATH_POINTS            "/luke/points"
 
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
@@ -48,12 +49,14 @@
 
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
+static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                             void *ctx);
 
 static lpd8808_t _dev;
 static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
-    { LUKE_POINT_PATH, COAP_POST | COAP_GET, _luke_points, NULL },
+    { LUKE_PATH_POINTS, COAP_POST | COAP_GET, _luke_points, NULL },
 };
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],

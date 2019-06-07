@@ -48,13 +48,13 @@
 
 #define LUKE_VICTORY_COND               (5U)
 #define LUKE_VICTORY_RESET_THRESHOLD    (3U)
+#define LUKE_VICTORY_TARGET_PATH_LEN    (16U)
+#define LUKE_VICTORY_TARGET_PORT        (GCOAP_PORT)
 
 #define LUKE_HUE_MAX                (120.0)
 
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
-static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
-                             void *ctx);
 
 static lpd8808_t _dev;
 static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
@@ -62,12 +62,19 @@ static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
     { LUKE_PATH_POINTS, COAP_POST | COAP_GET, _luke_points, NULL },
 };
+static sock_udp_ep_t _victory_target_remote  = {
+    .family = AF_INET6,
+    .port = LUKE_VICTORY_TARGET_PORT,
+    .netif = SOCK_ADDR_ANY_NETIF
+};
+static char _victory_target_path[LUKE_VICTORY_TARGET_PATH_LEN];
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],
     sizeof(_resources) / sizeof(_resources[0]),
     NULL
 };
 static mutex_t _points_mutex = MUTEX_INIT;
+static uint32_t _victory_last_sent;
 static uint16_t _points = 64U;
 static uint16_t _last_notified;
 static uint8_t _in_victory_cond = 0U;
@@ -175,6 +182,7 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
             }
             puts("Sending response");
             return gcoap_response(pdu, buf, len, code);
+        }
         default:
             return 0;
     }
@@ -216,6 +224,36 @@ static void _init_color_map(void)
     }
 }
 
+static void _post_to_victory_target(void)
+{
+    uint8_t buf[GCOAP_PDU_BUF_SIZE];
+    coap_pkt_t pdu;
+    int res;
+    size_t len;
+    size_t payload_len;
+    uint32_t now = xtimer_now_usec();
+
+    if (ipv6_addr_is_unspecified((ipv6_addr_t *)&_victory_target_remote.addr) ||
+        (_victory_target_path[0] == '\0')) {
+        puts("No target defined");
+        return;
+    }
+    if ((_victory_last_sent - now) < US_PER_SEC) {
+        puts("Last send less than a second ago");
+        return;
+    }
+    gcoap_req_init(&pdu, buf, GCOAP_PDU_BUF_SIZE, COAP_POST,
+                   _victory_target_path);
+    payload_len = sprintf((char *)pdu.payload, LUKE_PAYLOAD_FMT,
+                          _points);
+    len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
+    _victory_last_sent = xtimer_now_usec();
+    res = gcoap_req_send2(buf, len, &_victory_target_remote, NULL);
+    if (res == 0) {
+        puts("Unable to send");
+    }
+}
+
 int main(void)
 {
     xtimer_ticks32_t now = xtimer_now();
@@ -228,7 +266,7 @@ int main(void)
     while (1) {
         if (_in_victory_cond < LUKE_VICTORY_COND) {
             LED0_ON;
-            /* TODO make a victory POST */
+            _post_to_victory_target();
         }
         else {
             LED0_OFF;

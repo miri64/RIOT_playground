@@ -1,6 +1,6 @@
 # RIOT version
 
-- use 2018.10.1 for now
+- use 2019.04 for now
 
 # Config
 

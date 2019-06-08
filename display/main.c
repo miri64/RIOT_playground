@@ -17,9 +17,11 @@
 #include "led.h"
 #include "mutex.h"
 #include "net/gcoap.h"
+#include "net/ipv6/addr.h"
 #include "net/gnrc/netif.h"
 #include "net/gnrc/ipv6/nib/abr.h"
 #include "net/gnrc/sixlowpan/ctx.h"
+#include "net/sock/util.h"
 #include "lpd8808.h"
 #include "lpd8808_params.h"
 #include "xtimer.h"
@@ -34,17 +36,23 @@
 #define LUKE_DISPLAY_PREFIX_LEN     (64U)
 #endif
 
-
 #define LUKE_PAYLOAD_FMT            "{\"points\":%u}"
 #define LUKE_PAYLOAD_MIN_SIZE       (sizeof("{\"points\":0}") - 1)
 #define LUKE_PAYLOAD_MAX_SIZE       (sizeof("{\"points\":255}") - 1)
 
 #define LUKE_PATH_POINTS            "/luke/points"
+#define LUKE_PATH_VICTORY           "/luke/vic"
 
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
 #define LUKE_POINT_DROP_VALUE       (2U)
 #define LUKE_POINT_DROP_TIMEOUT     (200U * US_PER_MS)
+
+#define LUKE_TARGET_FMT             "{\"addr\":\"[%s]:%u\",\"path\":\"%s\"}"
+#define LUKE_TARGET_READ_FMT        "{\"addr\":\"%47s\",\"path\":\"%16s\"}"
+#define LUKE_TARGET_MIN_SIZE        (sizeof("{\"addr\":\"::1\",\"path\":\"/animate\"}"))
+#define LUKE_TARGET_MAX_SIZE        (sizeof("{\"addr\":\":99999\",\"path\":\"/dino/move\"}") \
+                                     + IPV6_ADDR_MAX_STR_LEN)
 
 #define LUKE_VICTORY_COND               (5U)
 #define LUKE_VICTORY_RESET_THRESHOLD    (3U)
@@ -55,12 +63,15 @@
 
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
+static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                             void *ctx);
 
 static lpd8808_t _dev;
 static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
     { LUKE_PATH_POINTS, COAP_POST | COAP_GET, _luke_points, NULL },
+    { LUKE_PATH_VICTORY, COAP_POST | COAP_GET, _luke_victory, NULL },
 };
 static sock_udp_ep_t _victory_target_remote  = {
     .family = AF_INET6,
@@ -179,6 +190,68 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
             else {
                 code = COAP_CODE_VALID;
                 _increment_points(p);
+            }
+            puts("Sending response");
+            return gcoap_response(pdu, buf, len, code);
+        }
+        default:
+            return 0;
+    }
+}
+
+static int make_sock_ep(sock_udp_ep_t *ep, const char *addr)
+{
+    ep->port = 0;
+    if (sock_udp_str2ep(ep, addr) < 0) {
+        return -1;
+    }
+    ep->family  = AF_INET6;
+    ep->netif   = SOCK_ADDR_ANY_NETIF;
+    if (ep->port == 0) {
+        ep->port = GCOAP_PORT;
+    }
+    return 0;
+}
+
+static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                             void *ctx)
+{
+    char addr_str[48];  /* max address length in LUKE_TARGET_READ_FMT + 1 */
+    unsigned code = COAP_CODE_BAD_REQUEST;
+
+    (void)ctx;
+    switch (coap_method2flag(coap_get_code_detail(pdu))) {
+        case COAP_GET: {
+            size_t payload_len;
+            uint16_t port;
+
+            gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+            sock_udp_ep_fmt(&_victory_target_remote, addr_str, &port);
+            payload_len = sprintf((char *)pdu->payload, LUKE_TARGET_FMT,
+                                  addr_str, port, _victory_target_path);
+            return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
+        }
+        case COAP_POST: {
+            unsigned content_type = coap_get_content_type(pdu);
+            char tmp[sizeof(_victory_target_path)];
+
+            if ((pdu->payload_len < LUKE_TARGET_MIN_SIZE) ||
+                (pdu->payload_len > LUKE_TARGET_MAX_SIZE) ||
+                (content_type != COAP_FORMAT_JSON) ||
+                (sscanf((char *)pdu->payload, LUKE_TARGET_READ_FMT, addr_str,
+                        tmp) != 1)) {
+                printf("(%u < %u) || (%u > %u) || (%u != %u) || "
+                       "(payload unparsable)\n",
+                       pdu->payload_len, LUKE_TARGET_MIN_SIZE,
+                       pdu->payload_len, LUKE_TARGET_MAX_SIZE,
+                       content_type, COAP_FORMAT_JSON);
+            }
+            else {
+                if (make_sock_ep(&_victory_target_remote, addr_str) == 0) {
+                    code = COAP_CODE_VALID;
+                    memcpy(_victory_target_path, tmp,
+                           sizeof(_victory_target_path));
+                }
             }
             puts("Sending response");
             return gcoap_response(pdu, buf, len, code);

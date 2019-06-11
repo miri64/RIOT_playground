@@ -6,8 +6,9 @@ RIOTBASE ?= $(CURDIR)/../../../RIOT
 
 USEMODULE += gnrc_netdev_default
 USEMODULE += auto_init_gnrc_netif
+USEMODULE += cord_ep
 USEMODULE += gcoap
-USEMODULE += gnrc_sixlowpan_border_router_default
+USEMODULE += gnrc_ipv6_default
 USEMODULE += lpd8808
 USEMODULE += xtimer
 
@@ -21,6 +22,7 @@ LUKE_DISPLAY_CNT        ?= 64
 LUKE_DISPLAY_CLK_PIN    ?= GPIO_PIN(PB, 23)
 LUKE_DISPLAY_DAT_PIN    ?= GPIO_PIN(PB, 22)
 
+CFLAGS += -DGNRC_IPV6_NIB_CONF_SLAAC=1
 CFLAGS += -DGNRC_NETIF_IPV6_GROUPS_NUMOF=5
 CFLAGS += -DGCOAP_STACK_SIZE=1564
 CFLAGS += "-DLPD8808_PARAM_LED_CNT=$(LUKE_DISPLAY_CNT)"

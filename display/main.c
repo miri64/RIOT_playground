@@ -17,11 +17,10 @@
 #include "jsmn.h"
 #include "led.h"
 #include "mutex.h"
+#include "net/cord/ep.h"
 #include "net/gcoap.h"
 #include "net/ipv6/addr.h"
 #include "net/gnrc/netif.h"
-#include "net/gnrc/ipv6/nib/abr.h"
-#include "net/gnrc/sixlowpan/ctx.h"
 #include "net/sock/util.h"
 #include "lpd8808.h"
 #include "lpd8808_params.h"
@@ -29,13 +28,7 @@
 
 #include "shell.h"
 
-#ifndef LUKE_DISPLAY_PREFIX
-#define LUKE_DISPLAY_PREFIX         { 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, \
-                                      0, 0, 0, 0, 0, 0, 0, 0 }
-#endif
-#ifndef LUKE_DISPLAY_PREFIX_LEN
-#define LUKE_DISPLAY_PREFIX_LEN     (64U)
-#endif
+#define CORERD_SERVER_ADDR          "[2001:db8:f4ba:cbcd:1ac0:ffee:1ac0:ffee]"
 
 #define LUKE_PAYLOAD_FMT            "{\"points\":%u}"
 #define LUKE_PAYLOAD_MIN_SIZE       (sizeof("{\"points\":0}") - 1)
@@ -58,6 +51,7 @@
 
 #define LUKE_HUE_MAX                (120.0)
 
+static const char corerd_server_addr[] = CORERD_SERVER_ADDR;
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
 static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
@@ -328,24 +322,6 @@ static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
     }
 }
 
-static void _init_iface(void)
-{
-    ipv6_addr_t prefix = { .u8 = LUKE_DISPLAY_PREFIX }, addr;
-    gnrc_netif_t *netif = gnrc_netif_iter(NULL);
-    netopt_enable_t enable = NETOPT_ENABLE;
-    char addr_str[IPV6_ADDR_MAX_STR_LEN];
-
-    gnrc_netif_ipv6_addrs_get(netif, &addr, sizeof(addr));
-    ipv6_addr_init_prefix(&addr, &prefix, LUKE_DISPLAY_PREFIX_LEN);
-    gnrc_netif_ipv6_addr_add(netif, &addr, LUKE_DISPLAY_PREFIX_LEN,
-                             GNRC_NETIF_IPV6_ADDRS_FLAGS_STATE_VALID);
-    gnrc_netapi_set(netif->pid, NETOPT_IPV6_SND_RTR_ADV, 0, &enable,
-                    sizeof(enable));
-    gnrc_ipv6_nib_abr_add(&addr);
-    printf("Set address to %s\n", ipv6_addr_to_str(addr_str, &addr,
-                                                   sizeof(addr_str)));
-}
-
 static void _init_color_map(void)
 {
     for (unsigned i = 0; i < LPD8808_PARAM_LED_CNT; i++) {
@@ -396,12 +372,21 @@ static void _post_to_victory_target(void)
 
 int main(void)
 {
+    sock_udp_ep_t corerd_server;
     xtimer_ticks32_t now = xtimer_now();
 
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
     gcoap_register_listener(&_listener);
-    _init_iface();
+    puts("Sleeping for 2 seconds");
+    xtimer_sleep(2);
+    if (make_sock_ep(&corerd_server, corerd_server_addr) < 0) {
+        puts("Can not parse CORERD_SERVER_ADDR");
+    }
+    puts("Register to CoRE RD server");
+    cord_ep_register(&corerd_server, NULL);
+    /* signal ready to display */
+    puts("Init complete");
     _init_color_map();
     while (1) {
         if (_in_victory_cond < LUKE_VICTORY_COND) {

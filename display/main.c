@@ -26,8 +26,6 @@
 
 #include "common.h"
 
-#define LUKE_PATH_VICTORY           "/luke/vic"
-
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
 #define LUKE_POINT_DROP_VALUE       (2U)
@@ -47,7 +45,7 @@ static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
     { LUKE_PATH_POINTS, COAP_POST | COAP_GET, _luke_points, NULL },
-    { LUKE_PATH_VICTORY, COAP_POST | COAP_GET, luke_set_target, NULL },
+    { LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
 };
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],

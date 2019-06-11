@@ -32,6 +32,7 @@ extern "C" {
 #define CORERD_SERVER_ADDR      "[2001:db8:f4ba:cbcd:1ac0:ffee:1ac0:ffee]"
 
 #define LUKE_PATH_POINTS        "/luke/points"
+#define LUKE_PATH_TARGET        "/luke/target"
 
 #define LUKE_POINTS_FMT         "{\"points\":%u}"
 #define LUKE_POINTS_MIN_SIZE    (sizeof("{\"points\":0}") - 1)

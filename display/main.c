@@ -189,7 +189,7 @@ static void _init_color_map(void)
 int main(void)
 {
     sock_udp_ep_t corerd_server;
-    xtimer_ticks32_t now = xtimer_now();
+    xtimer_ticks32_t now;
 
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
@@ -204,6 +204,7 @@ int main(void)
     /* signal ready to display */
     puts("Init complete");
     _init_color_map();
+    now = xtimer_now();
     while (1) {
         if (_in_victory_cond >= LUKE_VICTORY_COND) {
             LED0_ON;

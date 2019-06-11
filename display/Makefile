@@ -4,6 +4,8 @@ BOARD ?= samr21-xpro
 
 RIOTBASE ?= $(CURDIR)/../../../RIOT
 
+EXTERNAL_MODULE_DIRS += ../common
+
 USEMODULE += gnrc_netdev_default
 USEMODULE += auto_init_gnrc_netif
 USEMODULE += cord_ep
@@ -11,6 +13,7 @@ USEMODULE += gcoap
 USEMODULE += gnrc_ipv6_default
 USEMODULE += lpd8808
 USEMODULE += xtimer
+USEMODULE += luke_common
 
 USEPKG += jsmn
 
@@ -29,5 +32,7 @@ CFLAGS += "-DLPD8808_PARAM_LED_CNT=$(LUKE_DISPLAY_CNT)"
 CFLAGS += "-DLPD8808_PARAM_PIN_CLK=$(LUKE_DISPLAY_CLK_PIN)"
 CFLAGS += "-DLPD8808_PARAM_PIN_DAT=$(LUKE_DISPLAY_DAT_PIN)"
 CFLAGS += -DIEEE802154_DEFAULT_CHANNEL=$(DEFAULT_CHANNEL)
+
+INCLUDES = -I$(CURDIR)/../common/
 
 include $(RIOTBASE)/Makefile.include

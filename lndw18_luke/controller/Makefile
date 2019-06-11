@@ -9,6 +9,7 @@ EXTERNAL_MODULE_DIRS += ../common
 USEMODULE += gnrc_netdev_default
 USEMODULE += auto_init_gnrc_netif
 USEMODULE += xtimer
+USEMODULE += cord_ep
 USEMODULE += gcoap
 USEMODULE += gnrc_ipv6_default
 USEMODULE += luke_common
@@ -21,6 +22,7 @@ DEFAULT_CHANNEL ?= 19
 DEVELHELP ?= 0
 QUIET ?= 1
 
+CFLAGS += -DGNRC_IPV6_NIB_CONF_SLAAC=1
 CFLAGS += -DGCOAP_REQ_WAITING_MAX=64
 CFLAGS += -DIEEE802154_DEFAULT_CHANNEL=$(DEFAULT_CHANNEL)
 

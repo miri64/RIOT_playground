@@ -19,6 +19,7 @@
 #include "led.h"
 #include "msg.h"
 #include "periph/gpio.h"
+#include "net/cord/ep.h"
 #include "net/gcoap.h"
 #include "net/gnrc/ipv6/nib/ft.h"
 #include "thread.h"
@@ -34,28 +35,26 @@
 #endif
 #define LUKE_DEBOUNCE_INTERVAL      (10U * MS_PER_SEC)
 
-#ifndef LUKE_DISPLAY_PREFIX
-#define LUKE_DISPLAY_PREFIX         { 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, \
-                                      0, 0, 0, 0, 0, 0, 0, 1 }
-#endif
-#ifndef LUKE_DISPLAY_PREFIX_LEN
-#define LUKE_DISPLAY_PREFIX_LEN     (64U)
-#endif
-
 #ifndef LUKE_DISPLAY_PORT
 #define LUKE_DISPLAY_PORT           (GCOAP_PORT)
 #endif
 
-#define LUKE_POINT_PATH             "/luke/points"
+#define LUKE_PATH_TARGET            "/luke/button"
 
 #define LUKE_START_VALUE            (0U)
 
+static const char corerd_server_addr[] = CORERD_SERVER_ADDR;
 static atomic_uint _counter = ATOMIC_VAR_INIT(LUKE_START_VALUE);
 static xtimer_t _send_timer, _debounce_timer;
 static msg_t _send_timer_msg = { .type = LUKE_MSG_TYPE_SEND_POINTS };
-static sock_udp_ep_t remote = { .family = AF_INET6,
-                                .port = LUKE_DISPLAY_PORT,
-                                .netif = SOCK_ADDR_ANY_NETIF };
+static const coap_resource_t _resources[] = {
+    { LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
+};
+static gcoap_listener_t _listener = {
+    (coap_resource_t *)&_resources[0],
+    sizeof(_resources) / sizeof(_resources[0]),
+    NULL
+};
 
 static void _enable_button(void *arg)
 {
@@ -79,84 +78,42 @@ static inline void _schedule_next_send(void)
                    sched_active_pid);
 }
 
-static void _post(char *payload, size_t payload_len)
-{
-    uint8_t buf[GCOAP_PDU_BUF_SIZE];
-    coap_pkt_t pdu;
-    int res;
-    size_t len;
-
-    gcoap_req_init(&pdu, buf, GCOAP_PDU_BUF_SIZE, COAP_POST, LUKE_POINT_PATH);
-    memcpy(pdu.payload, payload, payload_len);
-    len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
-    res = gcoap_req_send2(buf, len, &remote, NULL);
-    if (res == 0) {
-        puts("Unable to send");
-    }
-}
-
 static void _client(void)
 {
-    if (ipv6_addr_is_unspecified((ipv6_addr_t *)&remote.addr)) {
-        return;
-    }
     _schedule_next_send();
     while (1) {
         msg_t msg;
 
         msg_receive(&msg);
         if (msg.type == LUKE_MSG_TYPE_SEND_POINTS) {
-            static char payload[LUKE_POINTS_MAX_SIZE];
             unsigned counter;
-            int res;
 
             counter = atomic_exchange(&_counter, LUKE_START_VALUE);
             _schedule_next_send();
-            res = snprintf(payload, sizeof(payload), LUKE_POINTS_FMT,
-                           counter);
-            if (res > 0) {
-                printf("Posting payload %s\n", payload);
-                _post(payload, (size_t)res);
-            }
-            else {
-                puts("Error setting payload");
+            printf("Posting %u points\n", counter);
+            if (post_points_to_target(counter) == 0) {
+                puts("Unable to send CoAP message");
             }
         }
-    }
-}
-
-static void _init_remote(void)
-{
-    static const ipv6_addr_t prefix = { .u8 = LUKE_DISPLAY_PREFIX };
-    gnrc_ipv6_nib_ft_t fte;
-    void *state = NULL;
-
-    xtimer_sleep(5U);
-    while (gnrc_ipv6_nib_ft_iter(NULL, 0, &state, &fte)) {
-        if (ipv6_addr_is_unspecified(&fte.dst)) {
-            break;
-        }
-    }
-    if (state == NULL) {
-        puts("Can't set remote");
-    }
-    else {
-        char addr_str[IPV6_ADDR_MAX_STR_LEN];
-
-        ipv6_addr_set_aiid((ipv6_addr_t *)&remote.addr, &fte.next_hop.u8[8]);
-        ipv6_addr_init_prefix((ipv6_addr_t *)&remote.addr,
-                              &prefix, LUKE_DISPLAY_PREFIX_LEN);
-        printf("Set remote to [%s]\n",
-               ipv6_addr_to_str(addr_str, (ipv6_addr_t *)&remote.addr,
-                                sizeof(addr_str)));
     }
 }
 
 int main(void)
 {
+    sock_udp_ep_t corerd_server;
+
     gpio_init_int(LUKE_BUTTON, GPIO_IN_PU, GPIO_FALLING, _increment_counter,
                   (void *)LUKE_BUTTON);
-    _init_remote();
+    gcoap_register_listener(&_listener);
+    puts("Sleeping for 2 seconds");
+    xtimer_sleep(2);
+    if (make_sock_ep(&corerd_server, corerd_server_addr) < 0) {
+        puts("Can not parse CORERD_SERVER_ADDR");
+    }
+    puts("Register to CoRE RD server");
+    cord_ep_register(&corerd_server, NULL);
+    /* signal ready to display */
+    puts("Init complete");
     _client();
     return 0;
 }

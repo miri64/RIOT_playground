@@ -29,16 +29,16 @@ def link_to_json(link):
 
 
 async def register(protocol, config_node, target_node):
-    request = Message(code=POST, mtype=CON) 
+    request = Message(code=POST, mtype=CON)
     request.set_request_uri(config_node["target"]["href"])
-    request.payload = link_to_json(target_node["points"])  
+    request.payload = link_to_json(target_node["points"])
     request.opt.content_format = 50 # json
     pr = protocol.request(request)
     resp = await pr.response
-    print("Tried to register {} with {}:".format(
+    logging.info("Tried to register {} with {}: {}".format(
             target_node["points"]["href"],
             config_node["target"]["href"],
-        ), resp)
+            resp))
 
 
 def incoming_observation(protocol, response):
@@ -57,8 +57,10 @@ def incoming_observation(protocol, response):
                 pr = urllib.parse.urlparse(link["href"])
                 link["addr"] = pr.netloc
                 link["path"] = pr.path
-                links[link["href"]] = link 
+                links[link["href"]] = link
     for link in links.values():
+        if link["addr"].startswith("[fe80::"):
+            continue
         path = link["path"]
         node, sense, *rest = path.strip("/").split("/")
         if node not in nodes:
@@ -79,7 +81,6 @@ def incoming_observation(protocol, response):
 async def main(addr):
     protocol = await Context.create_client_context()
 
-    print('coap://[{addr}]/resource-lookup'.format(addr=addr))
     request = Message(code=GET,
                       uri='coap://[{addr}]/resource-lookup'.format(addr=addr),
                       observe=0)
@@ -92,11 +93,11 @@ async def main(addr):
         pr.observation.register_callback(lambda data, protocol=protocol:
                 incoming_observation(protocol, data)
             )
-        print("waiting for response")
+        logging.info("waiting for response")
         resp = await pr.response
         incoming_observation(protocol, resp)
         exit_reason = await observation_is_over
-        print(exit_reason)
+        logging.info(exit_reason)
     finally:
         if not pr.observation.cancelled:
             pr.observation.cancel()

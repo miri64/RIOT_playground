@@ -117,7 +117,7 @@ int main(void)
     gcoap_register_listener(&_listener);
 
     /* warte ein wenig, bis sich das Netzwerk konfiguriert hat */
-    xtimer_sleep(2);
+    xtimer_sleep(10);
 
     /* Erstelle einen sock-Endpunkt für die vorkonfigurierte Addresse
      * des Ressourcen-Verzeichnisses */

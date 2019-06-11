@@ -24,7 +24,7 @@
 #include "thread.h"
 #include "xtimer.h"
 
-#include "shell.h"
+#include "common.h"
 
 #define LUKE_MSG_TYPE_SEND_POINTS   (0x4d41)
 #define LUKE_SEND_TIMEOUT           (100U * US_PER_MS)
@@ -46,8 +46,6 @@
 #define LUKE_DISPLAY_PORT           (GCOAP_PORT)
 #endif
 
-#define LUKE_PAYLOAD_FMT            "{\"points\":%u}"
-#define LUKE_PAYLOAD_SIZE           (sizeof("{\"points\":255}"))
 #define LUKE_POINT_PATH             "/luke/points"
 
 #define LUKE_START_VALUE            (0U)
@@ -108,13 +106,13 @@ static void _client(void)
 
         msg_receive(&msg);
         if (msg.type == LUKE_MSG_TYPE_SEND_POINTS) {
-            static char payload[LUKE_PAYLOAD_SIZE];
+            static char payload[LUKE_POINTS_MAX_SIZE];
             unsigned counter;
             int res;
 
             counter = atomic_exchange(&_counter, LUKE_START_VALUE);
             _schedule_next_send();
-            res = snprintf(payload, sizeof(payload), LUKE_PAYLOAD_FMT,
+            res = snprintf(payload, sizeof(payload), LUKE_POINTS_FMT,
                            counter);
             if (res > 0) {
                 printf("Posting payload %s\n", payload);

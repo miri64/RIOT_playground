@@ -39,8 +39,6 @@
 #define LUKE_DISPLAY_PORT           (GCOAP_PORT)
 #endif
 
-#define LUKE_PATH_TARGET            "/luke/button"
-
 #define LUKE_START_VALUE            (0U)
 
 static const char corerd_server_addr[] = CORERD_SERVER_ADDR;

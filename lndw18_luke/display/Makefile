@@ -11,6 +11,8 @@ USEMODULE += gnrc_sixlowpan_border_router_default
 USEMODULE += lpd8808
 USEMODULE += xtimer
 
+USEPKG += jsmn
+
 DEVELHELP ?= 0
 QUIET ?= 1
 

@@ -14,6 +14,7 @@
  */
 
 #include "color.h"
+#include "jsmn.h"
 #include "led.h"
 #include "mutex.h"
 #include "net/gcoap.h"
@@ -49,10 +50,6 @@
 #define LUKE_POINT_DROP_TIMEOUT     (200U * US_PER_MS)
 
 #define LUKE_TARGET_FMT             "{\"addr\":\"[%s]:%u\",\"path\":\"%s\"}"
-#define LUKE_TARGET_READ_FMT        "{\"addr\":\"%47s\",\"path\":\"%16s\"}"
-#define LUKE_TARGET_MIN_SIZE        (sizeof("{\"addr\":\"::1\",\"path\":\"/animate\"}"))
-#define LUKE_TARGET_MAX_SIZE        (sizeof("{\"addr\":\":99999\",\"path\":\"/dino/move\"}") \
-                                     + IPV6_ADDR_MAX_STR_LEN)
 
 #define LUKE_VICTORY_COND               (5U)
 #define LUKE_VICTORY_RESET_THRESHOLD    (3U)
@@ -66,6 +63,7 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
 static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                              void *ctx);
 
+static jsmn_parser _json_parser;
 static lpd8808_t _dev;
 static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
@@ -199,6 +197,16 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
     }
 }
 
+static inline bool jsoneq(const char *json, jsmntok_t *tok, const char *s)
+{
+    /* Das Objekt ist ein String */
+    return (tok->type == JSMN_STRING)
+        /* Der String ist so lang wie erwartet */
+        && ((int) strlen(s) == tok->end - tok->start)
+        /* Der String hat den erwarteten Wert */
+        && (strncmp(json + tok->start, s, tok->end - tok->start) == 0);
+}
+
 static int make_sock_ep(sock_udp_ep_t *ep, const char *addr)
 {
     ep->port = 0;
@@ -211,6 +219,77 @@ static int make_sock_ep(sock_udp_ep_t *ep, const char *addr)
         ep->port = GCOAP_PORT;
     }
     return 0;
+}
+
+static unsigned _set_target_from_payload(char *payload, size_t payload_len)
+{
+    int num;
+    /* 5 expected tokens:
+     *  1. top-level object
+     *  2. key of addr
+     *  3. value of addr
+     *  4. key of path
+     *  5. value of path */
+    jsmntok_t toks[5];
+    char *remote_tok = NULL, *path_tok = NULL;
+    size_t path_tok_len = 0;
+
+    jsmn_init(&_json_parser);
+    num = jsmn_parse(&_json_parser, payload, payload_len, toks,
+                     sizeof(toks) / sizeof(toks[0]));
+    if (num < 0) {
+        printf("Failed to parse JSON: %s (res: %d)\n", payload, payload_len);
+        return COAP_CODE_BAD_REQUEST;
+    }
+    if ((num < 1) || (toks[0].type != JSMN_OBJECT)) {
+        puts("Object expected at top-level");
+        return COAP_CODE_BAD_REQUEST;
+    }
+    for (int i = 1; i < num; i++) {
+        if (jsoneq(payload, &toks[i], "addr")) {
+            i++;
+            if (toks[i].type != JSMN_STRING) {
+                puts("\"addr\" is no a string");
+                return COAP_CODE_BAD_REQUEST;
+            }
+            remote_tok = payload + toks[i].start;
+            payload[toks[i].end] = '\0';
+        }
+        else if (jsoneq(payload, &toks[i], "path")) {
+            i++;
+
+            if (toks[i].type != JSMN_STRING) {
+                /* Wert von "path" ist kein String */
+                puts("\"path\" is no a string");
+                return COAP_CODE_BAD_REQUEST;
+            }
+            path_tok_len = toks[i].end - toks[i].start;
+            path_tok = payload + toks[i].start;
+        }
+        /* sonst haben wir einen unerwarteten Schlüssel; das ist nicht erlaubt */
+        else {
+            printf("Unexpected key: %.*s\n", toks[i].end - toks[i].start,
+                   payload + toks[i].start);
+            return COAP_CODE_BAD_REQUEST;
+        }
+    }
+    if (!remote_tok || !path_tok) {
+        puts("path or addr unset");
+        return COAP_CODE_BAD_REQUEST;
+    }
+    if (make_sock_ep(&_victory_target_remote, remote_tok) < 0) {
+        printf("Unable to parse address '%s'\n", remote_tok);
+        return COAP_CODE_BAD_REQUEST;
+    }
+    if (path_tok_len) {
+        strncpy(_victory_target_path, path_tok, path_tok_len);
+    }
+    else {
+        _victory_target_path[0] = '\0';
+    }
+    printf("Victory target set: {'addr': '%s', 'path': '%s'}\n", remote_tok,
+           _victory_target_path);
+    return COAP_CODE_VALID;
 }
 
 static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
@@ -233,25 +312,13 @@ static ssize_t _luke_victory(coap_pkt_t* pdu, uint8_t *buf, size_t len,
         }
         case COAP_POST: {
             unsigned content_type = coap_get_content_type(pdu);
-            char tmp[sizeof(_victory_target_path)];
 
-            if ((pdu->payload_len < LUKE_TARGET_MIN_SIZE) ||
-                (pdu->payload_len > LUKE_TARGET_MAX_SIZE) ||
-                (content_type != COAP_FORMAT_JSON) ||
-                (sscanf((char *)pdu->payload, LUKE_TARGET_READ_FMT, addr_str,
-                        tmp) != 1)) {
-                printf("(%u < %u) || (%u > %u) || (%u != %u) || "
-                       "(payload unparsable)\n",
-                       pdu->payload_len, LUKE_TARGET_MIN_SIZE,
-                       pdu->payload_len, LUKE_TARGET_MAX_SIZE,
-                       content_type, COAP_FORMAT_JSON);
+            if (content_type == COAP_FORMAT_JSON) {
+                code = _set_target_from_payload((char *)pdu->payload,
+                                                pdu->payload_len);
             }
             else {
-                if (make_sock_ep(&_victory_target_remote, addr_str) == 0) {
-                    code = COAP_CODE_VALID;
-                    memcpy(_victory_target_path, tmp,
-                           sizeof(_victory_target_path));
-                }
+                puts("Content-type not application/json");
             }
             puts("Sending response");
             return gcoap_response(pdu, buf, len, code);

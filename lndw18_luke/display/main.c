@@ -389,7 +389,7 @@ int main(void)
     puts("Init complete");
     _init_color_map();
     while (1) {
-        if (_in_victory_cond < LUKE_VICTORY_COND) {
+        if (_in_victory_cond >= LUKE_VICTORY_COND) {
             LED0_ON;
             _post_to_victory_target();
         }

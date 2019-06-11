@@ -60,6 +60,7 @@ def incoming_observation(protocol, response):
                 links[link["href"]] = link
     for link in links.values():
         if link["addr"].startswith("[fe80::"):
+            logging.error("address {} link-local".format(link["addr"]))
             continue
         path = link["path"]
         node, sense, *rest = path.strip("/").split("/")

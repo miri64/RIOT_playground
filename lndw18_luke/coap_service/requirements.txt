@@ -1,0 +1,2 @@
+tornado>=6.0.2
+aiocoap[all]>=0.4a1.post0

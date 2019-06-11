@@ -27,6 +27,8 @@
 
 #include "common.h"
 
+#define LUKE_BUTTON_PREFIX          "/btn"
+
 #define LUKE_MSG_TYPE_SEND_POINTS   (0x4d41)
 #define LUKE_SEND_TIMEOUT           (100U * US_PER_MS)
 
@@ -46,7 +48,7 @@ static atomic_uint _counter = ATOMIC_VAR_INIT(LUKE_START_VALUE);
 static xtimer_t _send_timer, _debounce_timer;
 static msg_t _send_timer_msg = { .type = LUKE_MSG_TYPE_SEND_POINTS };
 static const coap_resource_t _resources[] = {
-    { LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
+    { LUKE_BUTTON_PREFIX LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
 };
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],

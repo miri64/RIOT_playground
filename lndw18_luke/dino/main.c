@@ -30,6 +30,8 @@
 #define DINO_MOVE_PIN       GPIO_PIN(PB, 23)
 #endif
 
+#define DINO_PREFIX         "/dino"
+
 static const char corerd_server_addr[] = CORERD_SERVER_ADDR;
 
 static void _clear_dino(void *arg)
@@ -90,7 +92,7 @@ static ssize_t _dino_move(coap_pkt_t* pdu, uint8_t *buf, size_t len,
 }
 
 static const coap_resource_t _resources[] = {
-    { LUKE_PATH_POINTS, COAP_POST, _dino_move, NULL },
+    { DINO_PREFIX LUKE_PATH_POINTS, COAP_POST, _dino_move, NULL },
 };
 
 static gcoap_listener_t _listener = {

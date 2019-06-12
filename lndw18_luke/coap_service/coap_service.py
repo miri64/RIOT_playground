@@ -250,8 +250,15 @@ class CoapObserveHandler(tornado.websocket.WebSocketHandler):
         event_loop.spawn_callback(self.cancel_observation)
 
 
-async def main(corerd_addr, *args, **kwargs):
-    await observe('coap://[{addr}]/resource-lookup'.format(addr=corerd_addr))
+async def main(corerd_addr, www_dir, http_port=5656, *args, **kwargs):
+    corerd_anchor = 'coap://[{addr}]'.format(addr=corerd_addr)
+    corerd = '{anchor}/resource-lookup'.format(anchor=corerd_anchor)
+    with open(os.path.join(www_dir, "coap_service.json"), "w") as json_file:
+        json.dump({
+            "corerd": {"url": corerd, "anchor": corerd_anchor},
+            "coap_service": "localhost:{}".format(http_port),
+        }, json_file)
+    await observe(corerd)
     # error might have been caused by client so better shut down
     await shutdown_coap_client()
     # restart main
@@ -262,6 +269,7 @@ async def main(corerd_addr, *args, **kwargs):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("corerd_addr")
+    p.add_argument("www_dir")
     p.add_argument("http_port", type=int, default=5656, nargs="?")
     args = p.parse_args()
     application = tornado.web.Application([

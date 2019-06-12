@@ -131,6 +131,7 @@ async def observe(resource):
 class CoapRequestHandler(tornado.web.RequestHandler):
     METHODS = {
         "GET": GET,
+        "HEAD": GET,
         "POST": POST,
     }
 
@@ -166,7 +167,8 @@ class CoapRequestHandler(tornado.web.RequestHandler):
         if resp.code.is_successful():
             self.set_status(status, resp.code.name_printable)
             app_log.info("Success {}, {}".format(resp, resp.payload))
-            self.write(resp.payload)
+            if not self.request.method in ["HEAD"]:
+                self.write(resp.payload)
         else:
             app_log.error("Error {}, {}".format(resp, resp.payload))
             raise tornado.web.HTTPError(status, resp.payload,
@@ -174,6 +176,9 @@ class CoapRequestHandler(tornado.web.RequestHandler):
 
 
     async def get(self):
+        return await self._common()
+
+    async def head(self):
         return await self._common()
 
     async def post(self):

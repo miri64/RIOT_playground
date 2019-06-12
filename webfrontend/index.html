@@ -36,11 +36,13 @@
         </div>
       </div>
     </div>
-    <script src="js/jquery-3.2.1.slim.min.js"></script>
+    <script src="js/jquery-3.2.1.min.js"></script>
     <script src="js/jquery-migrate-3.1.0.min.js"></script>
     <script src="js/jquery-ui.min.js"></script>
     <script src="js/popper.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
+    <script src="js/parse_link_header.js"></script>
+    <script src="js/luke.js"></script>
     <script>
       $('.draggable').draggable({
         snap: $("#droparea"),
@@ -56,6 +58,7 @@
             .removeClass("ui-state-highlight")
         }
       });
+      run_luke();
     </script>
   </body>
 </html>

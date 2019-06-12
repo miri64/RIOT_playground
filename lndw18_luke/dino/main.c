@@ -113,12 +113,12 @@ int main(void)
     gpio_init_int(BTN0_PIN, BTN0_MODE, GPIO_FALLING, _toggle_dino, NULL);
     /* Initialisiere den Dino-Motor-Pin als ausgehenden Pin */
     gpio_init(DINO_MOVE_PIN, GPIO_OUT);
-    /* Registriere die CoAP-Server Definition */
-    gcoap_register_listener(&_listener);
 
     /* warte ein wenig, bis sich das Netzwerk konfiguriert hat */
-    xtimer_sleep(10);
+    xtimer_sleep(7);
 
+    /* Registriere die CoAP-Server Definition */
+    gcoap_register_listener(&_listener);
     /* Erstelle einen sock-Endpunkt für die vorkonfigurierte Addresse
      * des Ressourcen-Verzeichnisses */
     if (make_sock_ep(&corerd_server, corerd_server_addr) < 0) {

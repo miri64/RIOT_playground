@@ -80,12 +80,12 @@ def incoming_observation(protocol, response):
                                        nodes["dino"]))
 
 
-
-async def main(addr):
+async def main(corerd_addr):
     protocol = await Context.create_client_context()
 
     request = Message(code=GET,
-                      uri='coap://[{addr}]/resource-lookup'.format(addr=addr),
+                      uri='coap://[{addr}]/resource-lookup'
+                          .format(addr=corerd_addr),
                       observe=0)
 
     try:
@@ -108,7 +108,7 @@ async def main(addr):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("addr")
+    p.add_argument("corerd_addr")
     args = p.parse_args()
     event_loop = tornado.ioloop.IOLoop.current()
     event_loop.spawn_callback(main, **vars(args))

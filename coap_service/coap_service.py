@@ -11,11 +11,13 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import socket
 import sys
 from tornado.log import app_log
 import tornado.ioloop
 import tornado.web
+import tornado.websocket
 import urllib.parse
 
 from aiocoap import *
@@ -67,7 +69,7 @@ async def register(config_node, target_node):
             resp))
 
 
-def incoming_observation(response):
+def incoming_observation(response, websocket):
     links = {}
     nodes = {}
 
@@ -86,29 +88,35 @@ def incoming_observation(response):
                 link["path"] = pr.path
                 links[link["href"]] = link
     else:
-        logging.error("")
+        logging.error("Error: {}: {}".format(response, response.payload))
         return
-    for link in links.values():
-        if link["addr"].startswith("[fe80::"):
-            logging.error("address {} link-local".format(link["addr"]))
-            continue
-        path = link["path"]
-        node, sense, *rest = path.strip("/").split("/")
-        if node not in nodes:
-            nodes[node] = {sense: link}
-        else:
-            nodes[node][sense] = link
-    if "btn" in nodes and "target" in nodes["btn"] and \
-       "dsp" in nodes and "points" in nodes["dsp"]:
-        asyncio.ensure_future(register(nodes["btn"], nodes["dsp"]))
-    if "dsp" in nodes and "target" in nodes["dsp"] and \
-       "dino" in nodes and "points" in nodes["dino"]:
-        asyncio.ensure_future(register(nodes["dsp"], nodes["dino"]))
+    if websocket is not None and not websocket.is_closed():
+        websocket.write_message(response.payload)
+    elif websocket is None:
+        for link in links.values():
+            if link["addr"].startswith("[fe80::"):
+                logging.error("address {} link-local".format(link["addr"]))
+                continue
+            path = link["path"]
+            node, sense, *rest = path.strip("/").split("/")
+            if node not in nodes:
+                nodes[node] = {sense: link}
+            else:
+                nodes[node][sense] = link
+        if "btn" in nodes and "target" in nodes["btn"] and \
+           "dsp" in nodes and "points" in nodes["dsp"]:
+            asyncio.ensure_future(register(nodes["btn"], nodes["dsp"]))
+        if "dsp" in nodes and "target" in nodes["dsp"] and \
+           "dino" in nodes and "points" in nodes["dino"]:
+            asyncio.ensure_future(register(nodes["dsp"], nodes["dino"]))
 
 
 
-async def observe(resource):
+async def observe(resource, websocket=None):
     coap_client = await get_coap_client()
+    if (websocket is not None) and websocket.is_closed():
+        # if websocket was closed during awaiting client
+        return
     request = Message(code=GET, uri=resource, observe=0)
 
     try:
@@ -116,16 +124,21 @@ async def observe(resource):
         observation_is_over = asyncio.Future()
 
         pr.observation.register_errback(observation_is_over.set_result)
-        pr.observation.register_callback(incoming_observation)
+        pr.observation.register_callback(
+            lambda data, ws=websocket: incoming_observation(data, ws))
         logging.info("waiting for OBSERVE response")
+        if websocket is not None:
+            websocket.observation = pr.observation
         resp = await pr.response
-        incoming_observation(resp)
+        incoming_observation(resp, websocket)
         exit_reason = await observation_is_over
         logging.info(exit_reason)
     finally:
         if not pr.observation.cancelled:
             pr.observation.cancel()
             await asyncio.sleep(50)
+        if websocket is not None:
+            websocket.close()
 
 
 class CoapRequestHandler(tornado.web.RequestHandler):
@@ -185,6 +198,58 @@ class CoapRequestHandler(tornado.web.RequestHandler):
         return await self._common()
 
 
+class CoapObserveHandler(tornado.websocket.WebSocketHandler):
+    websockets = set()
+    keeper = None
+
+    @staticmethod
+    def keep_alive():
+        for websocket in CoapObserveHandler.websockets:
+            websocket.ping()
+
+    def is_closed(self):
+        return self not in CoapObserveHandler.websockets
+
+    def check_origin(self, origin):
+        app_log.info("origin: {}".format(origin))
+        return origin.startswith("file://") or \
+               origin.startswith("http://localhost")
+
+    async def get(self):
+        self.target = self.get_query_argument("target")
+        p = urllib.parse.urlparse(self.target)
+        if p.scheme not in coap_schemes:
+            raise tornado.web.HTTPError(400)
+        return await super(CoapObserveHandler, self).get()
+
+    async def open(self):
+        if not CoapObserveHandler.websockets:
+            CoapObserveHandler.keeper = tornado.ioloop.PeriodicCallback(
+                    CoapObserveHandler.keep_alive, 60 * 1000
+                )
+            CoapObserveHandler.keeper.start()
+        CoapObserveHandler.websockets.add(self)
+        self.observation = None
+        event_loop = tornado.ioloop.IOLoop.current()
+        event_loop.spawn_callback(observe, self.target, self)
+        app_log.info("Websocket to {} opened".format(self.target))
+
+    async def on_message(self):
+        pass
+
+    async def cancel_observation(self):
+        if (self.observation is not None) and (not self.observation.cancelled):
+            self.observation.cancel()
+
+    def on_close(self):
+        app_log.info("Websocket to {} closed".format(self.target))
+        CoapObserveHandler.websockets.discard(self)
+        if not CoapObserveHandler.websockets:
+            CoapObserveHandler.keeper.stop()
+        event_loop = tornado.ioloop.IOLoop.current()
+        event_loop.spawn_callback(self.cancel_observation)
+
+
 async def main(corerd_addr, *args, **kwargs):
     await observe('coap://[{addr}]/resource-lookup'.format(addr=corerd_addr))
     # error might have been caused by client so better shut down
@@ -200,7 +265,8 @@ if __name__ == "__main__":
     p.add_argument("http_port", type=int, default=5656, nargs="?")
     args = p.parse_args()
     application = tornado.web.Application([
-        (r"/coap", CoapRequestHandler)
+        (r"/coap", CoapRequestHandler),
+        (r"/coap_observe", CoapObserveHandler),
     ])
     application.listen(args.http_port)
     event_loop = tornado.ioloop.IOLoop.current()

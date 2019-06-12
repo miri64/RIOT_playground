@@ -105,6 +105,9 @@ async def main(corerd_addr):
         if not pr.observation.cancelled:
             pr.observation.cancel()
             await asyncio.sleep(50)
+    # restart main
+    event_loop = tornado.ioloop.IOLoop.current()
+    event_loop.spawn_callback(main, corerd_addr)
 
 
 if __name__ == "__main__":

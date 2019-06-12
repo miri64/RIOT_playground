@@ -21,8 +21,6 @@ from aiocoap.util import linkformat
 
 logging.basicConfig(level=logging.INFO)
 
-event_loop = None
-
 
 def link_to_json(link):
     return json.dumps(
@@ -44,7 +42,6 @@ async def register(protocol, config_node, target_node):
 
 
 def incoming_observation(protocol, response):
-    global event_loop
     links = {}
     nodes = {}
 

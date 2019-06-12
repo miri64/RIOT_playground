@@ -11,11 +11,13 @@ import argparse
 import asyncio
 import json
 import logging
+import tornado.ioloop
 import urllib.parse
 
 from aiocoap import *
 from aiocoap.numbers import media_types
 from aiocoap.util import linkformat
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -108,5 +110,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("addr")
     args = p.parse_args()
-    event_loop = asyncio.get_event_loop()
-    event_loop.run_until_complete(main(args.addr))
+    event_loop = tornado.ioloop.IOLoop.current()
+    event_loop.spawn_callback(main, **vars(args))
+    event_loop.start()

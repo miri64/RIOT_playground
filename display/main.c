@@ -193,9 +193,9 @@ int main(void)
 
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
+    puts("Sleeping for 7 seconds");
+    xtimer_sleep(7);
     gcoap_register_listener(&_listener);
-    puts("Sleeping for 10 seconds");
-    xtimer_sleep(10);
     if (make_sock_ep(&corerd_server, corerd_server_addr) < 0) {
         puts("Can not parse CORERD_SERVER_ADDR");
     }

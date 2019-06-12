@@ -104,7 +104,8 @@ async def main(corerd_addr):
     finally:
         if not pr.observation.cancelled:
             pr.observation.cancel()
-            await asyncio.sleep(1)
+            await asyncio.sleep(50)
+
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()

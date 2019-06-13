@@ -98,11 +98,11 @@ def incoming_observation(response, websocket):
                 logging.error("address {} link-local".format(link["addr"]))
                 continue
             path = link["path"]
-            node, sense, *rest = path.strip("/").split("/")
-            if node not in nodes:
-                nodes[node] = {sense: link}
-            else:
-                nodes[node][sense] = link
+            node, *rest = path.strip("/").split("/")
+            if (len(rest) > 0) and (node not in nodes):
+                nodes[node] = {rest[0]: link}
+            elif (len(rest) > 0):
+                nodes[node][rest[0]] = link
         if "btn" in nodes and "target" in nodes["btn"] and \
            "dsp" in nodes and "points" in nodes["dsp"]:
             asyncio.ensure_future(register(nodes["btn"], nodes["dsp"]))

@@ -33,6 +33,7 @@ extern "C" {
 
 #define LUKE_PATH_POINTS        "/points"
 #define LUKE_PATH_TARGET        "/target"
+#define LUKE_PATH_REBOOT        "/reboot"
 
 #define LUKE_POINTS_FMT         "{\"points\":%u}"
 #define LUKE_POINTS_MIN_SIZE    (sizeof("{\"points\":0}") - 1)
@@ -44,6 +45,8 @@ extern "C" {
 
 ssize_t luke_set_target(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                         void *ctx);
+ssize_t luke_reboot(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                    void *ctx);
 size_t post_points_to_target(unsigned points);
 
 static inline int make_sock_ep(sock_udp_ep_t *ep, const char *addr)

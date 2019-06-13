@@ -48,6 +48,7 @@ static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
     { LUKE_DISPLAY_PREFIX LUKE_PATH_POINTS, COAP_POST | COAP_GET, _luke_points, NULL },
     { LUKE_DISPLAY_PREFIX LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
+    { LUKE_PATH_REBOOT, COAP_POST, luke_reboot, NULL },
 };
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],

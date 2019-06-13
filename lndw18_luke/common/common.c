@@ -16,7 +16,11 @@
 #ifdef MODULE_JSMN
 #include "jsmn.h"
 #endif
+#include "periph/pm.h"
+#include "xtimer.h"
 #include "common.h"
+
+static void _reboot(void *arg);
 
 #ifdef MODULE_JSMN
 static jsmn_parser _json_parser;
@@ -26,8 +30,29 @@ static sock_udp_ep_t _target_remote  = {
     .port = LUKE_TARGET_PORT,
     .netif = SOCK_ADDR_ANY_NETIF
 };
+static xtimer_t _reboot_timer = { .callback = _reboot };
 static char _target_path[LUKE_TARGET_PATH_LEN];
 static uint32_t _victory_last_sent;
+
+static void _reboot(void *arg)
+{
+    (void)arg;
+    pm_reboot();
+}
+
+ssize_t luke_reboot(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx)
+{
+    (void)ctx;
+    switch (coap_method2flag(coap_get_code_detail(pdu))) {
+        case COAP_POST: {
+            /* delay by 5 second to allow for response */
+            xtimer_set(&_reboot_timer, 5 * US_PER_SEC);
+            return gcoap_response(pdu, buf, len, COAP_CODE_VALID);
+        }
+        default:
+            return 0;
+    }
+}
 
 size_t post_points_to_target(unsigned points)
 {

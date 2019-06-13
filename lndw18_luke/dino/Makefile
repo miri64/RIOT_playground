@@ -4,6 +4,8 @@ BOARD ?= samr21-xpro
 
 RIOTBASE ?= $(CURDIR)/../../../RIOT
 
+EXTERNAL_MODULE_DIRS += ../common
+
 FEATURE_REQUIRED += periph_gpio
 
 USEMODULE += gnrc_netdev_default
@@ -12,6 +14,7 @@ USEMODULE += cord_ep
 USEMODULE += gcoap
 USEMODULE += gnrc_icmpv6_echo
 USEMODULE += gnrc_ipv6_default
+USEMODULE += luke_common
 
 DEVELHELP       ?= 0
 DEFAULT_CHANNEL ?= 19

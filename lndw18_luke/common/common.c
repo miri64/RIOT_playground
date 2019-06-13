@@ -13,10 +13,14 @@
  * @author  Martine Lenders <m.lenders@fu-berlin.de>
  */
 
+#ifdef MODULE_JSMN
 #include "jsmn.h"
+#endif
 #include "common.h"
 
+#ifdef MODULE_JSMN
 static jsmn_parser _json_parser;
+#endif
 static sock_udp_ep_t _target_remote  = {
     .family = AF_INET6,
     .port = LUKE_TARGET_PORT,
@@ -25,6 +29,33 @@ static sock_udp_ep_t _target_remote  = {
 static char _target_path[LUKE_TARGET_PATH_LEN];
 static uint32_t _victory_last_sent;
 
+size_t post_points_to_target(unsigned points)
+{
+    uint8_t buf[GCOAP_PDU_BUF_SIZE];
+    coap_pkt_t pdu;
+    size_t len;
+    size_t payload_len;
+    uint32_t now = xtimer_now_usec();
+
+    if (ipv6_addr_is_unspecified((ipv6_addr_t *)&_target_remote.addr) ||
+        (_target_path[0] == '\0')) {
+        puts("No target defined");
+        return 0;
+    }
+    if ((_victory_last_sent - now) < US_PER_SEC) {
+        puts("Last send less than a second ago");
+        return 0;
+    }
+    gcoap_req_init(&pdu, buf, GCOAP_PDU_BUF_SIZE, COAP_POST,
+                   _target_path);
+    payload_len = sprintf((char *)pdu.payload, LUKE_POINTS_FMT,
+                          points);
+    len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
+    _victory_last_sent = xtimer_now_usec();
+    return gcoap_req_send2(buf, len, &_target_remote, NULL);
+}
+
+#ifdef MODULE_JSMN
 static unsigned _set_target_from_payload(char *payload, size_t payload_len);
 
 ssize_t luke_set_target(coap_pkt_t* pdu, uint8_t *buf, size_t len,
@@ -61,32 +92,6 @@ ssize_t luke_set_target(coap_pkt_t* pdu, uint8_t *buf, size_t len,
         default:
             return 0;
     }
-}
-
-size_t post_points_to_target(unsigned points)
-{
-    uint8_t buf[GCOAP_PDU_BUF_SIZE];
-    coap_pkt_t pdu;
-    size_t len;
-    size_t payload_len;
-    uint32_t now = xtimer_now_usec();
-
-    if (ipv6_addr_is_unspecified((ipv6_addr_t *)&_target_remote.addr) ||
-        (_target_path[0] == '\0')) {
-        puts("No target defined");
-        return 0;
-    }
-    if ((_victory_last_sent - now) < US_PER_SEC) {
-        puts("Last send less than a second ago");
-        return 0;
-    }
-    gcoap_req_init(&pdu, buf, GCOAP_PDU_BUF_SIZE, COAP_POST,
-                   _target_path);
-    payload_len = sprintf((char *)pdu.payload, LUKE_POINTS_FMT,
-                          points);
-    len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
-    _victory_last_sent = xtimer_now_usec();
-    return gcoap_req_send2(buf, len, &_target_remote, NULL);
 }
 
 static inline bool _jsoneq(const char *json, jsmntok_t *tok, const char *s)
@@ -169,6 +174,7 @@ static unsigned _set_target_from_payload(char *payload, size_t payload_len)
            _target_path);
     return COAP_CODE_VALID;
 }
+#endif
 
 
 /** @} */

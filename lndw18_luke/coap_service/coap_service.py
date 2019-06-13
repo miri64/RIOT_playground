@@ -148,6 +148,12 @@ class CoapRequestHandler(tornado.web.RequestHandler):
         "POST": POST,
     }
 
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
     async def _common(self):
         coap_client = await get_coap_client()
         target = self.get_query_argument("target")
@@ -178,9 +184,10 @@ class CoapRequestHandler(tornado.web.RequestHandler):
         status_class, status_detail = divmod(resp.code, 0x20)
         status = ((status_class * 100) + status_detail)
         if resp.code.is_successful():
-            self.set_status(status, resp.code.name_printable)
             app_log.info("Success {}, {}".format(resp, resp.payload))
             if not self.request.method in ["HEAD"]:
+                if (mime_type == "application/json"):
+                    resp.payload.replace(b'""', b'null')
                 self.write(resp.payload)
         else:
             app_log.error("Error {}, {}".format(resp, resp.payload))
@@ -193,6 +200,11 @@ class CoapRequestHandler(tornado.web.RequestHandler):
 
     async def head(self):
         return await self._common()
+
+    def options(self):
+        # no body
+        self.set_status(204)
+        self.finish()
 
     async def post(self):
         return await self._common()

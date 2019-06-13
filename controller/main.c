@@ -49,6 +49,7 @@ static xtimer_t _send_timer, _debounce_timer;
 static msg_t _send_timer_msg = { .type = LUKE_MSG_TYPE_SEND_POINTS };
 static const coap_resource_t _resources[] = {
     { LUKE_BUTTON_PREFIX LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
+    { LUKE_PATH_REBOOT, COAP_POST, luke_reboot, NULL },
 };
 static gcoap_listener_t _listener = {
     (coap_resource_t *)&_resources[0],

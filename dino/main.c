@@ -93,6 +93,7 @@ static ssize_t _dino_move(coap_pkt_t* pdu, uint8_t *buf, size_t len,
 
 static const coap_resource_t _resources[] = {
     { DINO_PREFIX LUKE_PATH_POINTS, COAP_POST, _dino_move, NULL },
+    { LUKE_PATH_REBOOT, COAP_POST, luke_reboot, NULL },
 };
 
 static gcoap_listener_t _listener = {

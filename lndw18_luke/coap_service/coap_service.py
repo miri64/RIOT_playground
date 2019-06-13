@@ -132,7 +132,7 @@ async def observe(resource, websocket=None):
         resp = await pr.response
         incoming_observation(resp, websocket)
         exit_reason = await observation_is_over
-        logging.info(exit_reason)
+        logging.info("reason to exit observation: '{}'".format(exit_reason))
     finally:
         if not pr.observation.cancelled:
             pr.observation.cancel()

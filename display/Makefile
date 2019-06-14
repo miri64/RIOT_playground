@@ -17,6 +17,8 @@ USEMODULE += luke_common
 
 USEPKG += jsmn
 
+FEATURES_REQUIRED += periph_gpio_irq
+
 DEVELHELP ?= 0
 QUIET ?= 1
 

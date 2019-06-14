@@ -13,6 +13,7 @@
  * @author  Martine Lenders <m.lenders@fu-berlin.de>
  */
 
+#include "board.h"
 #include "color.h"
 #include "led.h"
 #include "mutex.h"
@@ -31,7 +32,10 @@
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
 #define LUKE_POINT_DROP_VALUE       (2U)
-#define LUKE_POINT_DROP_TIMEOUT     (200U * US_PER_MS)
+#define LUKE_POINT_DROP_TIMEOUT_MAX (1000U * US_PER_MS)
+
+#define LUKE_DIFFICULTY_DEFAULT     (9U)
+#define LUKE_DIFFICULTY_MAX         (10U)
 
 #define LUKE_VICTORY_COND               (5U)
 #define LUKE_VICTORY_RESET_THRESHOLD    (3U)
@@ -59,6 +63,7 @@ static mutex_t _points_mutex = MUTEX_INIT;
 static uint16_t _points = 64U;
 static uint16_t _last_notified;
 static uint8_t _in_victory_cond = 0U;
+static volatile uint8_t _difficulty = ATOMIC_VAR_INIT(LUKE_DIFFICULTY_DEFAULT);
 
 static void _notify_points(void)
 {
@@ -169,6 +174,16 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
     }
 }
 
+static void _set_difficulty(void *arg)
+{
+    (void)arg;
+    if (_difficulty++ >= LUKE_DIFFICULTY_MAX) {
+        /* loop to difficulty 1 */
+        _difficulty = 1;
+    }
+    _points = (((uint16_t)_difficulty) * LUKE_POINTS_MAX) / LUKE_DIFFICULTY_MAX;
+}
+
 static void _init_color_map(void)
 {
     for (unsigned i = 0; i < LPD8808_PARAM_LED_CNT; i++) {
@@ -192,6 +207,7 @@ int main(void)
     sock_udp_ep_t corerd_server;
     xtimer_ticks32_t now;
 
+    gpio_init_int(BTN0_PIN, BTN0_MODE, GPIO_FALLING, _set_difficulty, NULL);
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
     puts("Sleeping for 7 seconds");
@@ -207,6 +223,7 @@ int main(void)
     _init_color_map();
     now = xtimer_now();
     while (1) {
+        uint32_t timeout;
         if (_in_victory_cond >= LUKE_VICTORY_COND) {
             LED0_ON;
             if (post_points_to_target(_points) == 0) {
@@ -217,7 +234,10 @@ int main(void)
             LED0_OFF;
         }
         _decrement_points(LUKE_POINT_DROP_VALUE);
-        xtimer_periodic_wakeup(&now, LUKE_POINT_DROP_TIMEOUT);
+        timeout = LUKE_POINT_DROP_TIMEOUT_MAX -
+            ((LUKE_POINT_DROP_TIMEOUT_MAX * (_difficulty - 1)) /
+             LUKE_DIFFICULTY_MAX);
+        xtimer_periodic_wakeup(&now, timeout);
     }
     return 0;
 }

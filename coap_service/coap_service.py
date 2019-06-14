@@ -177,6 +177,9 @@ class CoapRequestHandler(tornado.web.RequestHandler):
         except socket.gaierror as e:
             self.log_exception(*sys.exc_info())
             raise tornado.web.HTTPError(400, str(e))
+        except OSError as e:
+            self.log_exception(*sys.exc_info())
+            raise tornado.web.HTTPError(404, str(e))
         cf = resp.opt.content_format
         mime_type = media_types.get(cf, "type %s" % cf)
         mime_type, *parameters = mime_type.split(";")

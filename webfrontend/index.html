@@ -8,56 +8,53 @@
 
     <title>Index</title>
     <style>
+      .droparea.empty-droparea {
+        height: 200px;
+      }
       .droparea {
-        height: 50px;
-        width: 100%;
+        width: 90%;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 5px;
+      }
+      .draggable {
+        position: relative;
+      }
+      .widget-reload {
+        position: absolute;
+        bottom: 1px;
+        left: 1px;
       }
     </style>
   </head>
   <body>
     <header class="navbar navbar-expand">
-      <a class="navbar-brand text-dark" href="#">
+      <a class="navbar-brand text-dark mr-auto" href="#">
         Powered by <img src="img/riot-logo.svg" class="d-inline-block align-center" />
       </a>
+      <a id="reload-page" class="btn btn-light">&#8634;</a>&nbsp
     </header>
     <div class="container">
       <div class="row">
-        <div class="col">
-          <div id="droparea" class="droppable text-center ui-widget-content droparea">
+        <div class="col text-center">
+          <div id="base-droparea"
+               class="droppable text-center ui-widget-content
+                      droparea empty-droparea">
           </div>
         </div>
-        <div class="col" id="assetsarea">
-          <div class="draggable text-center ui-widget-content">
-            Test1
-          </div>
-          <div class="draggable text-center ui-widget-content">
-            Test2
-          </div>
+        <div class="col text-center" id="assetsarea">
         </div>
       </div>
     </div>
     <script src="js/jquery-3.2.1.min.js"></script>
     <script src="js/jquery-migrate-3.1.0.min.js"></script>
     <script src="js/jquery-ui.min.js"></script>
+    <script src="js/jquery.simulate.js"></script>
     <script src="js/popper.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/parse_link_header.js"></script>
     <script src="js/luke.js"></script>
     <script>
-      $('.draggable').draggable({
-        snap: $("#droparea"),
-        snapMode: "outer",
-      });
-      $('#droparea').droppable({
-        drop: function(event, ui) {
-          $(this)
-            .addClass("ui-state-highlight")
-        },
-        out: function(event, ui) {
-          $(this)
-            .removeClass("ui-state-highlight")
-        }
-      });
       run_luke();
     </script>
   </body>

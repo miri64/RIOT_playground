@@ -1,0 +1,4 @@
+<div id="dino-widget" class="draggable">
+  <span class="widget-reload"><a class="reboot btn btn-dark" href="#">&#8634;</a></span>
+  <img src="img/dino.png" class="img-fluid mx-auto" />
+</div>

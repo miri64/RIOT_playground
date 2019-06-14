@@ -29,6 +29,7 @@ from aiocoap.util import linkformat
 logging.basicConfig(level=logging.INFO)
 
 coap_client = None
+main_observer = None
 
 async def get_coap_client():
     global coap_client
@@ -283,6 +284,7 @@ class CoapObserveHandler(tornado.websocket.WebSocketHandler):
 
 
 async def main(corerd_addr, www_dir, http_port=5656, *args, **kwargs):
+    global main_observer
     corerd_anchor = 'coap://[{addr}]'.format(addr=corerd_addr)
     corerd = '{anchor}/resource-lookup'.format(anchor=corerd_anchor)
     with open(os.path.join(www_dir, "coap_service.json"), "w") as json_file:
@@ -290,7 +292,9 @@ async def main(corerd_addr, www_dir, http_port=5656, *args, **kwargs):
             "corerd": {"url": corerd, "anchor": corerd_anchor},
             "coap_service": "localhost:{}".format(http_port),
         }, json_file)
-    await Observer(corerd).request()
+    if main_observer is None:
+        main_observer = Observer(corerd)
+    await main_observer.request()
     # error might have been caused by client so better shut down
     await shutdown_coap_client()
     # restart main

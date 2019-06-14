@@ -257,13 +257,21 @@ class CoAPNode {
 
         obj.widget = $(data)
         var reboot_button = obj.widget.find(".reboot")
+        var remove_button = obj.widget.find(".remove")
         reboot_button.click(function (event) {
           event.preventDefault();
           if ("reboot" in obj.resources) {
             obj.resources.reboot.post({});
           }
         });
+        remove_button.click(function (event) {
+          event.preventDefault();
+          obj.remove_widget();
+        });
         obj.widget.attr("title", obj.name + ": " + obj.anchor)
+        if (obj.anchor.includes("[fe80::")) {
+          obj.widget.addClass("bg-danger")
+        }
         assetsarea.append(obj.widget);
         obj.widget.draggable({
           start: function(event, ui) {
@@ -307,6 +315,15 @@ class CoAPNode {
           load_targets();
         }
       });
+    }
+  }
+
+  remove_widget() {
+    if (this.widget) {
+      if (confirm("Remove " + this.name + ": " + this.anchor + " widget?")) {
+        this.widget.remove();
+        this.widget = null;
+      }
     }
   }
 

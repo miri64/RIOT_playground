@@ -298,7 +298,7 @@ class RebootHandler(tornado.web.RequestHandler):
 
     async def post(self):
         async def post_reboot(reboot_resource):
-            request = Message(code=POST, mtype=CON, uri=reboot_resource)
+            request = Message(code=POST, mtype=NON, uri=reboot_resource)
             asyncio.wait_for(coap_client.request(request).response, 1.0)
 
         global main_observer

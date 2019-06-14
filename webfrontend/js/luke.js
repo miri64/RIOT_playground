@@ -321,6 +321,10 @@ class CoAPNode {
   remove_widget() {
     if (this.widget) {
       if (confirm("Remove " + this.name + ": " + this.anchor + " widget?")) {
+        if (this.widget.parent().hasClass("droparea")) {
+          this.widget.parent().droppable("enable");
+          this.widget.parent().addClass("empty-droparea")
+        }
         this.widget.remove();
         this.widget = null;
       }

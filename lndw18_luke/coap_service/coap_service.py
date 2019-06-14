@@ -79,8 +79,8 @@ class Observer(object):
         self._pr = None
 
     def cancel(self):
-        if self._pr.observation is not None and \
-           not self._pr.observation.cancelled:
+        if (self._pr is not None) and (self._pr.observation is not None) and \
+           (not self._pr.observation.cancelled):
             logging.info("Observation to {} canceled".format(self.resource))
             self._pr.observation.cancel()
             return True

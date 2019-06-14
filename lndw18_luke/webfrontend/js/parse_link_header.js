@@ -57,8 +57,8 @@ function parseLink(link) {
 }
 
 function parseLinkHeader(linkHeader) {
-  if (!linkHeader) return null;
+  if (!linkHeader) return [];
 
   return linkHeader.split(/,\s*</)
-   .map(parseLink)
+   .map(parseLink);
 };

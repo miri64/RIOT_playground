@@ -126,7 +126,7 @@ int main(void)
         puts("Can not parse CORERD_SERVER_ADDR");
     }
     cord_ep_register(&corerd_server, NULL);
-    gpio_clear(DINO_MOVE_PIN);
+    _set_dino(NULL);
     while (1) { }
     return 0;
 }

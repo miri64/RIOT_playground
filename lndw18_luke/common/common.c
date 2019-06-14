@@ -13,6 +13,8 @@
  * @author  Martine Lenders <m.lenders@fu-berlin.de>
  */
 
+#include <stdio.h>
+
 #ifdef MODULE_JSMN
 #include "jsmn.h"
 #endif
@@ -140,7 +142,7 @@ static unsigned _set_target_from_payload(char *payload, size_t payload_len)
      *  5. value of path */
     jsmntok_t toks[5];
     char *remote_tok = NULL, *path_tok = NULL;
-    size_t path_tok_len = 0;
+    size_t remote_tok_len = 0, path_tok_len = 0;
 
     jsmn_init(&_json_parser);
     num = jsmn_parse(&_json_parser, payload, payload_len, toks,
@@ -161,6 +163,7 @@ static unsigned _set_target_from_payload(char *payload, size_t payload_len)
                 return COAP_CODE_BAD_REQUEST;
             }
             remote_tok = payload + toks[i].start;
+            remote_tok_len = toks[i].end - toks[i].start;
             payload[toks[i].end] = '\0';
         }
         else if (_jsoneq(payload, &toks[i], "path")) {
@@ -185,17 +188,16 @@ static unsigned _set_target_from_payload(char *payload, size_t payload_len)
         puts("path or addr unset");
         return COAP_CODE_BAD_REQUEST;
     }
-    if (make_sock_ep(&_target_remote, remote_tok) < 0) {
+    if (remote_tok_len == 0) {
+        memset(&_target_remote.addr, 0, sizeof(_target_remote.addr));
+    }
+    else if (make_sock_ep(&_target_remote, remote_tok) < 0) {
         printf("Unable to parse address '%s'\n", remote_tok);
         return COAP_CODE_BAD_REQUEST;
     }
-    if (path_tok_len) {
-        strncpy(_target_path, path_tok, path_tok_len);
-    }
-    else {
-        _target_path[0] = '\0';
-    }
-    printf("Victory target set: {'addr': '%s', 'path': '%s'}\n", remote_tok,
+    memset(_target_path, 0, sizeof(_target_path));
+    strncpy(_target_path, path_tok, path_tok_len);
+    printf("Target set: {'addr': '%s', 'path': '%s'}\n", remote_tok,
            _target_path);
     return COAP_CODE_VALID;
 }

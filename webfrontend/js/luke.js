@@ -342,8 +342,9 @@ class CoAPNode {
     //         http://jsfiddle.net/vwZMZ/2/
     var droppableOffset = droppable.offset(),
         draggableOffset = draggable.offset(),
+        draggableHeight = draggable.height(),
         dx = droppableOffset.left - draggableOffset.left,
-        dy = droppableOffset.top - droppableOffset.top;
+        dy = droppableOffset.top - draggableOffset.top - (draggableHeight / 2);
 
     draggable.simulate("drag", {dx: dx, dy: dy});
   }

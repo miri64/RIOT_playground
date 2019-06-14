@@ -48,7 +48,7 @@ ssize_t luke_reboot(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx)
     switch (coap_method2flag(coap_get_code_detail(pdu))) {
         case COAP_POST: {
             /* delay by 5 second to allow for response */
-            xtimer_set(&_reboot_timer, 5 * US_PER_SEC);
+            xtimer_set(&_reboot_timer, 8 * US_PER_SEC);
             return gcoap_response(pdu, buf, len, COAP_CODE_VALID);
         }
         default:

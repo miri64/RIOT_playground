@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import socket
+import subprocess
 import sys
 from tornado.log import app_log
 import tornado.ioloop
@@ -30,6 +31,7 @@ logging.basicConfig(level=logging.INFO)
 
 coap_client = None
 main_observer = None
+reboot_resources = set()
 
 async def get_coap_client():
     global coap_client
@@ -133,6 +135,8 @@ class Observer(object):
                 for link in ls.links:
                     link = link.as_json_data()
                     pr = urllib.parse.urlparse(link["href"])
+                    if pr.path.endswith("reboot"):
+                        reboot_resources.add(link["href"])
                     link["addr"] = pr.netloc
                     link["path"] = pr.path
                     links[link["href"]] = link
@@ -283,8 +287,40 @@ class CoapObserveHandler(tornado.websocket.WebSocketHandler):
         event_loop.spawn_callback(self.cancel_observation)
 
 
+class RebootHandler(tornado.web.RequestHandler):
+    main_args = {}
+
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
+    async def post(self):
+        async def post_reboot(reboot_resource):
+            request = Message(code=POST, mtype=CON, uri=reboot_resource)
+            await coap_client.request(request).response
+
+        global main_observer
+        coap_client = await get_coap_client()
+        subprocess.run(["sudo", "systemctl", "restart", "aiocoap-rd"])
+        if reboot_resources:
+            await asyncio.wait([post_reboot(r) for r in reboot_resources])
+        if main_observer is not None:
+            main_observer.cancel()
+            main_observer = None
+        await asyncio.sleep(10)
+        event_loop.spawn_callback(main, **RebootHandler.main_args)
+
+    def options(self):
+        # no body
+        self.set_status(204)
+        self.finish()
+
+
 async def main(corerd_addr, www_dir, http_port=5656, *args, **kwargs):
     global main_observer
+    RebootHandler.main_args = locals()
     corerd_anchor = 'coap://[{addr}]'.format(addr=corerd_addr)
     corerd = '{anchor}/resource-lookup'.format(anchor=corerd_anchor)
     with open(os.path.join(www_dir, "coap_service.json"), "w") as json_file:
@@ -311,6 +347,7 @@ if __name__ == "__main__":
     application = tornado.web.Application([
         (r"/coap", CoapRequestHandler),
         (r"/coap_observe", CoapObserveHandler),
+        (r"/reboot", RebootHandler),
     ])
     application.listen(args.http_port)
     event_loop = tornado.ioloop.IOLoop.current()

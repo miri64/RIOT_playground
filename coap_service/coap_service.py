@@ -278,7 +278,7 @@ async def main(corerd_addr, www_dir, http_port=5656, *args, **kwargs):
     await shutdown_coap_client()
     # restart main
     event_loop = tornado.ioloop.IOLoop.current()
-    event_loop.spawn_callback(main, corerd_addr, *args, **kwargs)
+    event_loop.spawn_callback(main, corerd_addr, www_dir, *args, **kwargs)
 
 
 if __name__ == "__main__":

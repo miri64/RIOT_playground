@@ -31,6 +31,7 @@
 
 #define LUKE_MSG_TYPE_SEND_POINTS   (0x4d41)
 #define LUKE_SEND_TIMEOUT           (100U * US_PER_MS)
+#define LUKE_SEND_REMAINING_DEFAULT (US_PER_SEC / LUKE_SEND_TIMEOUT)
 
 #ifndef LUKE_BUTTON
 #define LUKE_BUTTON                 GPIO_PIN(PB, 2)
@@ -45,6 +46,7 @@
 
 static const char corerd_server_addr[] = CORERD_SERVER_ADDR;
 static atomic_uint _counter = ATOMIC_VAR_INIT(LUKE_START_VALUE);
+static atomic_uint _sends_remaining = ATOMIC_VAR_INIT(0);
 static xtimer_t _send_timer, _debounce_timer;
 static msg_t _send_timer_msg = { .type = LUKE_MSG_TYPE_SEND_POINTS };
 static const coap_resource_t _resources[] = {
@@ -56,6 +58,7 @@ static gcoap_listener_t _listener = {
     sizeof(_resources) / sizeof(_resources[0]),
     NULL
 };
+static kernel_pid_t _main_pid;
 
 static void _enable_button(void *arg)
 {
@@ -63,25 +66,28 @@ static void _enable_button(void *arg)
     gpio_irq_enable(button);
 }
 
+static inline void _schedule_next_send(void)
+{
+    xtimer_set_msg(&_send_timer, LUKE_SEND_TIMEOUT, &_send_timer_msg,
+                   _main_pid);
+}
+
 static void _increment_counter(void *arg)
 {
+    unsigned res;
     gpio_irq_disable((gpio_t)arg);
     _debounce_timer.callback = _enable_button;
     _debounce_timer.arg = arg;
     xtimer_set(&_debounce_timer, LUKE_DEBOUNCE_INTERVAL);
     atomic_fetch_add(&_counter, 1);
+    if ((res = atomic_exchange(&_sends_remaining, LUKE_SEND_REMAINING_DEFAULT)) == 0) {
+        _schedule_next_send();
+    }
     LED0_TOGGLE;
-}
-
-static inline void _schedule_next_send(void)
-{
-    xtimer_set_msg(&_send_timer, LUKE_SEND_TIMEOUT, &_send_timer_msg,
-                   sched_active_pid);
 }
 
 static void _client(void)
 {
-    _schedule_next_send();
     while (1) {
         msg_t msg;
 
@@ -90,7 +96,13 @@ static void _client(void)
             unsigned counter;
 
             counter = atomic_exchange(&_counter, LUKE_START_VALUE);
-            _schedule_next_send();
+            /* decrement _sends_remaining. If it was > 1 previously, schedule
+             * next send (triggering a final send when _send_remaining becomes 1
+             * (atomic_fetch_sub returns 2) that then decrements
+             * _sends_remaining to 0, letting this atomic_fetch_sub return 1) */
+            if (atomic_fetch_sub(&_sends_remaining, 1) > 1) {
+                _schedule_next_send();
+            }
             printf("Posting %u points\n", counter);
             if (post_points_to_target(counter) == 0) {
                 puts("Unable to send CoAP message");
@@ -102,7 +114,11 @@ static void _client(void)
 int main(void)
 {
     sock_udp_ep_t corerd_server;
+    msg_t msg_q;
 
+    msg_init_queue(&msg_q, 1);
+
+    _main_pid = sched_active_pid;
     gpio_init_int(LUKE_BUTTON, GPIO_IN_PU, GPIO_FALLING, _increment_counter,
                   (void *)LUKE_BUTTON);
     puts("Sleeping for 7 seconds");

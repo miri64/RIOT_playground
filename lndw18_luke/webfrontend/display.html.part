@@ -1,5 +1,6 @@
 <div id="display-widget" class="draggable">
   <span class="widget-reload"><a class="reboot btn btn-dark" href="#">&#8634;</a></span>
+  <span class="widget-remove"><a class="remove btn btn-dark" href="#">&times;</a></span>
   <div id="display-droparea" class="droppable text-center ui-widget-content droparea empty-droparea">
   </div>
   <h1><small>&#x21D1;</small></h1>

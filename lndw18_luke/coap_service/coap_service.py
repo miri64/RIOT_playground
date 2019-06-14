@@ -299,7 +299,7 @@ class RebootHandler(tornado.web.RequestHandler):
     async def post(self):
         async def post_reboot(reboot_resource):
             request = Message(code=POST, mtype=CON, uri=reboot_resource)
-            await coap_client.request(request).response
+            asyncio.wait_for(coap_client.request(request).response, 1.0)
 
         global main_observer
         coap_client = await get_coap_client()
@@ -313,6 +313,8 @@ class RebootHandler(tornado.web.RequestHandler):
         if main_observer is not None:
             main_observer.cancel()
             main_observer = None
+        for websocket in list(CoapObserveHandler.websockets):
+            websocket.close()
         await asyncio.sleep(10)
         event_loop.spawn_callback(main, **RebootHandler.main_args)
 

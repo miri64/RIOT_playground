@@ -78,7 +78,10 @@ static void _notify_points(void)
                                          _points);
             size_t len;
 
+            printf("Sending '%s' (%u bytes) to observers\n",
+                   (char *)pdu.payload, (unsigned)payload_len);
             len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
+            printf("The CoAP message has %u byte\n", (unsigned)len);
             gcoap_obs_send(&buf[0], len, &_resources[0]);
             break;
         }
@@ -237,6 +240,7 @@ int main(void)
         timeout = LUKE_POINT_DROP_TIMEOUT_MAX -
             ((LUKE_POINT_DROP_TIMEOUT_MAX * (_difficulty - 1)) /
              LUKE_DIFFICULTY_MAX);
+        printf("timeout: %lu ms\n", (long unsigned)timeout);
         xtimer_periodic_wakeup(&now, timeout);
     }
     return 0;

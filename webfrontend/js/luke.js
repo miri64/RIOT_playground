@@ -148,6 +148,7 @@ class CoAPResource {
   constructor(resource, node, name) {
     this.url = resource.url;
     this.node = node;
+    this.observing = false;
     if (name) {
       this.name = name;
     }
@@ -192,7 +193,10 @@ class CoAPResource {
   }
 
   observe() {
-    CoAPResource.create_ws(ws_url_from_coap_url(this.url), this.obs_handler);
+    if (!this.observing) {
+      this.observing = true;
+      CoAPResource.create_ws(ws_url_from_coap_url(this.url), this.obs_handler);
+    }
   }
 
   post(data, type="application/json") {

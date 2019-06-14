@@ -352,6 +352,14 @@ function run_luke() {
   var core_rd = null;
   $.getJSON("../coap_service.json", function(conf) {
     config = conf;
+    $("#reboot-all").click(function (event) {
+      if (confirm("Restart everything?")) {
+        event.preventDefault();
+        $.post("http://" + config.coap_service + "/reboot", function () {
+          location.reload();
+        });
+      }
+    });
     $("#reload-page").click(function (event) {
       event.preventDefault();
       location.reload();

@@ -69,76 +69,94 @@ async def register(config_node, target_node):
             resp))
 
 
-def incoming_observation(response, websocket):
-    links = {}
-    nodes = {}
+class Observer(object):
+    def __init__(self, resource, websocket=None):
+        self.resource = resource
+        self.websocket = websocket
+        self._pr = None
 
-    logging.info("Received response {}".format(response))
-    if response.code.is_successful():
-        cf = response.opt.content_format
-        mime_type = media_types.get(cf, "type %s" % cf)
-        mime_type, *parameters = mime_type.split(";")
-        logging.info("Content format: {}".format(mime_type))
-        if mime_type == "application/link-format":
-            ls = linkformat.parse(response.payload.decode('utf-8'))
-            for link in ls.links:
-                link = link.as_json_data()
-                pr = urllib.parse.urlparse(link["href"])
-                link["addr"] = pr.netloc
-                link["path"] = pr.path
-                links[link["href"]] = link
-    else:
-        logging.error("Error: {}: {}".format(response, response.payload))
-        return
-    if websocket is not None and not websocket.is_closed():
-        websocket.write_message(response.payload)
-    elif websocket is None:
-        for link in links.values():
-            if link["addr"].startswith("[fe80::"):
-                logging.error("address {} link-local".format(link["addr"]))
-                continue
-            path = link["path"]
-            node, *rest = path.strip("/").split("/")
-            if (len(rest) > 0) and (node not in nodes):
-                nodes[node] = {rest[0]: link}
-            elif (len(rest) > 0):
-                nodes[node][rest[0]] = link
-        if "btn" in nodes and "target" in nodes["btn"] and \
-           "dsp" in nodes and "points" in nodes["dsp"]:
-            asyncio.ensure_future(register(nodes["btn"], nodes["dsp"]))
-        if "dsp" in nodes and "target" in nodes["dsp"] and \
-           "dino" in nodes and "points" in nodes["dino"]:
-            asyncio.ensure_future(register(nodes["dsp"], nodes["dino"]))
+    def cancel(self):
+        if self._pr.observation is not None and \
+           not self._pr.observation.cancelled:
+            logging.info("Observation to {} canceled".format(self.resource))
+            self._pr.observation.cancel()
+            return True
+        return False
 
+    async def request(self):
+        if self._pr is not None:
+            logging.warning("Observer to {} already observing"
+                            .format(self.resource))
+            return
+        coap_client = await get_coap_client()
+        if (self.websocket is not None) and self.websocket.is_closed():
+            # if websocket was closed during awaiting client
+            return
+        request = Message(code=GET, uri=self.resource, observe=0)
 
+        try:
+            self._pr = coap_client.request(request)
+            observation_is_over = asyncio.Future()
 
-async def observe(resource, websocket=None):
-    coap_client = await get_coap_client()
-    if (websocket is not None) and websocket.is_closed():
-        # if websocket was closed during awaiting client
-        return
-    request = Message(code=GET, uri=resource, observe=0)
+            self._pr.observation.register_errback(
+                    observation_is_over.set_result
+                )
+            self._pr.observation.register_callback(
+                    self.incoming_observation
+                )
+            logging.info("waiting for OBSERVE response")
+            resp = await self._pr.response
+            self.incoming_observation(resp)
+            exit_reason = await observation_is_over
+            logging.info("reason to exit observation: '{}'".format(exit_reason))
+        finally:
+            self._pr = None
+            if self.cancel():
+                await asyncio.sleep(50)
+            if self.websocket is not None:
+                self.websocket.close()
 
-    try:
-        pr = coap_client.request(request)
-        observation_is_over = asyncio.Future()
+    def incoming_observation(self, response):
+        links = {}
+        nodes = {}
 
-        pr.observation.register_errback(observation_is_over.set_result)
-        pr.observation.register_callback(
-            lambda data, ws=websocket: incoming_observation(data, ws))
-        logging.info("waiting for OBSERVE response")
-        if websocket is not None:
-            websocket.observation = pr.observation
-        resp = await pr.response
-        incoming_observation(resp, websocket)
-        exit_reason = await observation_is_over
-        logging.info("reason to exit observation: '{}'".format(exit_reason))
-    finally:
-        if not pr.observation.cancelled:
-            pr.observation.cancel()
-            await asyncio.sleep(50)
-        if websocket is not None:
-            websocket.close()
+        logging.info("Received response {} for {}".format(response,
+                                                          self.resource))
+        if response.code.is_successful():
+            cf = response.opt.content_format
+            mime_type = media_types.get(cf, "type %s" % cf)
+            mime_type, *parameters = mime_type.split(";")
+            logging.info("Content format: {}".format(mime_type))
+            if mime_type == "application/link-format":
+                ls = linkformat.parse(response.payload.decode('utf-8'))
+                for link in ls.links:
+                    link = link.as_json_data()
+                    pr = urllib.parse.urlparse(link["href"])
+                    link["addr"] = pr.netloc
+                    link["path"] = pr.path
+                    links[link["href"]] = link
+        else:
+            logging.error("Error: {}: {}".format(response, response.payload))
+            return
+        if self.websocket is not None and not self.websocket.is_closed():
+            self.websocket.write_message(response.payload)
+        elif self.websocket is None:
+            for link in links.values():
+                if link["addr"].startswith("[fe80::"):
+                    logging.error("address {} link-local".format(link["addr"]))
+                    continue
+                path = link["path"]
+                node, *rest = path.strip("/").split("/")
+                if (len(rest) > 0) and (node not in nodes):
+                    nodes[node] = {rest[0]: link}
+                elif (len(rest) > 0):
+                    nodes[node][rest[0]] = link
+            if "btn" in nodes and "target" in nodes["btn"] and \
+               "dsp" in nodes and "points" in nodes["dsp"]:
+                asyncio.ensure_future(register(nodes["btn"], nodes["dsp"]))
+            if "dsp" in nodes and "target" in nodes["dsp"] and \
+               "dino" in nodes and "points" in nodes["dino"]:
+                asyncio.ensure_future(register(nodes["dsp"], nodes["dino"]))
 
 
 class CoapRequestHandler(tornado.web.RequestHandler):
@@ -231,10 +249,11 @@ class CoapObserveHandler(tornado.websocket.WebSocketHandler):
                origin.startswith("http://localhost")
 
     async def get(self):
-        self.target = self.get_query_argument("target")
-        p = urllib.parse.urlparse(self.target)
+        target = self.get_query_argument("target")
+        p = urllib.parse.urlparse(target)
         if p.scheme not in coap_schemes:
             raise tornado.web.HTTPError(400)
+        self.observer = Observer(target, self)
         return await super(CoapObserveHandler, self).get()
 
     async def open(self):
@@ -244,20 +263,18 @@ class CoapObserveHandler(tornado.websocket.WebSocketHandler):
                 )
             CoapObserveHandler.keeper.start()
         CoapObserveHandler.websockets.add(self)
-        self.observation = None
         event_loop = tornado.ioloop.IOLoop.current()
-        event_loop.spawn_callback(observe, self.target, self)
-        app_log.info("Websocket to {} opened".format(self.target))
+        event_loop.spawn_callback(self.observer.request)
+        app_log.info("Websocket to {} opened".format(self.observer.resource))
 
     async def on_message(self):
         pass
 
     async def cancel_observation(self):
-        if (self.observation is not None) and (not self.observation.cancelled):
-            self.observation.cancel()
+        self.observer.cancel()
 
     def on_close(self):
-        app_log.info("Websocket to {} closed".format(self.target))
+        app_log.info("Websocket to {} closed".format(self.observer.resource))
         CoapObserveHandler.websockets.discard(self)
         if not CoapObserveHandler.websockets:
             CoapObserveHandler.keeper.stop()
@@ -273,7 +290,7 @@ async def main(corerd_addr, www_dir, http_port=5656, *args, **kwargs):
             "corerd": {"url": corerd, "anchor": corerd_anchor},
             "coap_service": "localhost:{}".format(http_port),
         }, json_file)
-    await observe(corerd)
+    await Observer(corerd).request()
     # error might have been caused by client so better shut down
     await shutdown_coap_client()
     # restart main

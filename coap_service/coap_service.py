@@ -304,7 +304,11 @@ class RebootHandler(tornado.web.RequestHandler):
         global main_observer
         coap_client = await get_coap_client()
         subprocess.run(["sudo", "systemctl", "restart", "aiocoap-rd"])
+        logging.info("rebooting nodes")
         if reboot_resources:
+            logging.info('\n'.join(
+                " - {}".format(r) for r in reboot_resources)
+            )
             await asyncio.wait([post_reboot(r) for r in reboot_resources])
         if main_observer is not None:
             main_observer.cancel()

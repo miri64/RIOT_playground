@@ -2,6 +2,8 @@ APPLICATION = luke_controller
 
 BOARD ?= samr21-xpro
 
+SERIAL ?= ATML2127031800002651
+
 RIOTBASE ?= $(CURDIR)/../../../RIOT
 
 EXTERNAL_MODULE_DIRS += ../common

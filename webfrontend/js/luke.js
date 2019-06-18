@@ -178,11 +178,14 @@ class CoAPResource {
     else {
       this.name = get_resource_name(resource);
     }
-    this.get_handler = get_handlers[this.name] ||
+    this.get_handler = get_handlers[this.node.name + "/" + this.name] ||
+                       get_handlers[this.name] ||
                        CoAPResource.default_handler
-    this.obs_handler = obs_handlers[this.name] ||
+    this.obs_handler = obs_handlers[this.node.name + "/" + this.name] ||
+                       obs_handlers[this.name] ||
                        CoAPResource.default_handler;
-    this.post_handler = post_handlers[this.name] ||
+    this.post_handler = post_handlers[this.node.name + "/" + this.name] ||
+                        post_handlers[this.name] ||
                         CoAPResource.default_handler;
     this.widget = null;
   }

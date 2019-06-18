@@ -19,6 +19,11 @@ var get_handlers = {
     $("#display-points").attr("height", abs_height)
     $("#display-points").attr("y", display.y + (display.height - abs_height));
   },
+  "difficulty": function (data) {
+    var data = JSON.parse(data);
+
+    post_handlers["difficulty"](data);
+  },
   "resource-lookup": function (data) {
     var resources = parseLinkHeader(data);
 
@@ -70,11 +75,19 @@ var obs_handlers = {
   "points": function (evt) {
     get_handlers["points"](evt.data);
   },
+  "difficulty": function (evt) {
+    get_handlers["difficulty"](evt.data);
+  },
   "resource-lookup": function (evt) {
     get_handlers["resource-lookup"](evt.data);
   },
 };
 var post_handlers = {
+  "difficulty": function (response) {
+    if (response.difficulty) {
+      $("#difficulty").text(response.difficulty);
+    }
+  }
 }
 var config = null
 
@@ -100,6 +113,9 @@ function get_resource_name(resource) {
   }
   else if (resource.url.endsWith("/target")) {
     return "target";
+  }
+  else if (resource.url.endsWith("/dif")) {
+    return "difficulty";
   }
   else if (resource.url.endsWith("/reboot")) {
     return "reboot";
@@ -133,8 +149,13 @@ function load_targets() {
     if (!node) {
       return;
     }
-    if (name == "display" && ("points" in node.resources)) {
-      node.resources.points.observe();
+    if (name == "display") {
+      if ("difficulty" in node.resources) {
+        node.resources.difficulty.observe();
+      }
+      if ("points" in node.resources) {
+        node.resources.points.observe();
+      }
     }
     if ("target" in node.resources) {
       node.resources.target.get();
@@ -264,6 +285,8 @@ class CoAPNode {
         obj.widget = $(data)
         var reboot_button = obj.widget.find(".reboot")
         var remove_button = obj.widget.find(".remove")
+        var increment = obj.widget.find(".increment")
+        var decrement = obj.widget.find(".decrement")
         reboot_button.click(function (event) {
           event.preventDefault();
           if ("reboot" in obj.resources) {
@@ -273,6 +296,20 @@ class CoAPNode {
         remove_button.click(function (event) {
           event.preventDefault();
           obj.remove_widget();
+        });
+        increment.click(function (event) {
+          event.preventDefault();
+          if ("difficulty" in obj.resources) {
+            var cur = parseInt($("#difficulty").text())
+            obj.resources.difficulty.post({difficulty: cur + 1});
+          }
+        });
+        decrement.click(function (event) {
+          event.preventDefault();
+          if ("difficulty" in obj.resources) {
+            var cur = parseInt($("#difficulty").text())
+            obj.resources.difficulty.post({difficulty: cur - 1});
+          }
         });
         obj.widget.attr("title", obj.name + ": " + obj.anchor)
         if (obj.anchor.includes("[fe80::")) {

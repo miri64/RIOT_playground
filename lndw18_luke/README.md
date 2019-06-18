@@ -113,7 +113,7 @@ Currently the demo has 3 nodes
 
 ## Adding new resources
 - extend `get_resource_name()` in `webfrontend/js/luke.js`
-- extend if necessary: `get_handlers` and `obs_handlers` in
+- extend if necessary: `get_handlers`, `obs_handlers`, `post_handlers` in
   `webfrontend/js/luke.js`
 - add capability for custom POST success handlers to CoAPResource.post() if
   necessary

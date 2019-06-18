@@ -74,6 +74,8 @@ var obs_handlers = {
     get_handlers["resource-lookup"](evt.data);
   },
 };
+var post_handlers = {
+}
 var config = null
 
 function get_node_name(resource) {
@@ -159,6 +161,8 @@ class CoAPResource {
                        CoAPResource.default_handler
     this.obs_handler = obs_handlers[this.name] ||
                        CoAPResource.default_handler;
+    this.post_handler = post_handlers[this.name] ||
+                        CoAPResource.default_handler;
     this.widget = null;
   }
 
@@ -208,9 +212,7 @@ class CoAPResource {
       data: JSON.stringify(data),
       contentType: type,
       dataType: "json",
-      success: function(response) {
-        console.log(response)
-      },
+      success: this.post_handler,
       error: function(xhr, status) {
         console.log(status + ": " + xhr)
       },

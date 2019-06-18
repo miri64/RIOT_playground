@@ -15,6 +15,7 @@ USEMODULE += gcoap
 USEMODULE += gnrc_ipv6_default
 USEMODULE += lpd8808
 USEMODULE += xtimer
+USEMODULE += core_thread_flags
 USEMODULE += luke_common
 
 USEPKG += jsmn

@@ -23,6 +23,7 @@
 #include "net/gnrc/netif.h"
 #include "lpd8808.h"
 #include "lpd8808_params.h"
+#include "thread_flags.h"
 #include "xtimer.h"
 
 #include "common.h"
@@ -41,7 +42,9 @@
 #define LUKE_VICTORY_RESET_THRESHOLD    (3U)
 
 #define LUKE_HUE_MAX                (120.0)
+#define LUKE_THREAD_FLAG_DEC        (1 << 3)
 
+static thread_t *_main_thread = NULL;
 static const char corerd_server_addr[] = CORERD_SERVER_ADDR;
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
@@ -107,6 +110,8 @@ static void _increment_points(int p)
 {
     uint16_t new_points;
 
+    assert(_main_thread);
+    thread_flags_set(_main_thread, LUKE_THREAD_FLAG_DEC);
     mutex_lock(&_points_mutex);
     new_points = _points + p;
     printf("increment by %i\n", p);
@@ -185,6 +190,8 @@ static void _set_difficulty(void *arg)
         _difficulty = 1;
     }
     _points = (((uint16_t)_difficulty) * LUKE_POINTS_MAX) / LUKE_DIFFICULTY_MAX;
+    /* possibly need to wake-up main thread to decrement points again */
+    thread_flags_set(_main_thread, LUKE_THREAD_FLAG_DEC);
 }
 
 static void _init_color_map(void)
@@ -210,6 +217,7 @@ int main(void)
     sock_udp_ep_t corerd_server;
     xtimer_ticks32_t now;
 
+    _main_thread = (thread_t *)sched_active_thread;
     gpio_init_int(BTN0_PIN, BTN0_MODE, GPIO_FALLING, _set_difficulty, NULL);
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
@@ -240,8 +248,14 @@ int main(void)
         timeout = LUKE_POINT_DROP_TIMEOUT_MAX -
             ((LUKE_POINT_DROP_TIMEOUT_MAX * (_difficulty - 1)) /
              LUKE_DIFFICULTY_MAX);
-        printf("timeout: %lu ms\n", (long unsigned)timeout);
-        xtimer_periodic_wakeup(&now, timeout);
+        if (_points > 0) {
+            printf("timeout: %lu ms\n", (long unsigned)timeout);
+            xtimer_periodic_wakeup(&now, timeout);
+        }
+        else {
+            thread_flags_wait_any(LUKE_THREAD_FLAG_DEC);
+            now = xtimer_now();
+        }
     }
     return 0;
 }

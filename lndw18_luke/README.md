@@ -29,13 +29,6 @@
 ## Widget is not movable anymore
 - reload page (button is supposed to at one point)
 
-## Nodes have link-local address (widgets are red)
-- sometimes it helps to reboot a single node. Remove the invalid red widget
-  if it bothers you (otherwise reload page (green button top right), it will
-  disappear)
-- if that doesn't help: reboot the whole demo (red button top right). Wait until
-  the page refreshes (may take several seconds)
-
 ## Node widget does not appear
 - reset node manually
 - if it still does not appear: reboot the whole demo (red button top right).

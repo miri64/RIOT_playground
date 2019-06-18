@@ -121,8 +121,8 @@ int main(void)
     _main_pid = sched_active_pid;
     gpio_init_int(LUKE_BUTTON, GPIO_IN_PU, GPIO_FALLING, _increment_counter,
                   (void *)LUKE_BUTTON);
-    puts("Sleeping for 7 seconds");
-    xtimer_sleep(7);
+    puts("Sleeping for 2 seconds");
+    xtimer_sleep(2);
     gcoap_register_listener(&_listener);
     if (make_sock_ep(&corerd_server, corerd_server_addr) < 0) {
         puts("Can not parse CORERD_SERVER_ADDR");

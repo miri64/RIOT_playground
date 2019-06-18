@@ -299,8 +299,8 @@ int main(void)
     gpio_init_int(BTN0_PIN, BTN0_MODE, GPIO_FALLING, _incr_difficulty, NULL);
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
-    puts("Sleeping for 7 seconds");
-    xtimer_sleep(7);
+    puts("Sleeping for 2 seconds");
+    xtimer_sleep(2);
     gcoap_register_listener(&_listener);
     if (make_sock_ep(&corerd_server, corerd_server_addr) < 0) {
         puts("Can not parse CORERD_SERVER_ADDR");

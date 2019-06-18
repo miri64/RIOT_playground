@@ -75,6 +75,18 @@ var obs_handlers = {
   "points": function (evt) {
     get_handlers["points"](evt.data);
   },
+  "dino/points": function (evt) {
+    var data = JSON.parse(evt.data);
+    var dino = get_node_by_name("dino")
+    if ((data.points > 0) && !dino.shaking) {
+      dino.shaking = true;
+      $("#dino-widget img").effect("shake",
+        {duration: 5000, times: 9, complete: function() {
+          dino.shaking = false;
+        }}
+      );
+   }
+  },
   "difficulty": function (evt) {
     get_handlers["difficulty"](evt.data);
   },
@@ -149,12 +161,12 @@ function load_targets() {
     if (!node) {
       return;
     }
+    if ("points" in node.resources) {
+      node.resources.points.observe();
+    }
     if (name == "display") {
       if ("difficulty" in node.resources) {
         node.resources.difficulty.observe();
-      }
-      if ("points" in node.resources) {
-        node.resources.points.observe();
       }
     }
     if ("target" in node.resources) {

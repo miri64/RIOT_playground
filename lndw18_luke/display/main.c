@@ -29,6 +29,11 @@
 #include "common.h"
 
 #define LUKE_DISPLAY_PREFIX         "/dsp"
+#define LUKE_PATH_DIFFICULTY        "/dif"
+
+#define LUKE_DIFFICULTY_FMT         "{\"difficulty\":%u}"
+#define LUKE_DIFFICULTY_MIN_SIZE    (sizeof("{\"difficulty\":1}") - 1)
+#define LUKE_DIFFICULTY_MAX_SIZE    (sizeof("{\"difficulty\":10}") - 1)
 
 #define LUKE_POINTS_PER_LED         (1U)
 #define LUKE_POINTS_MAX             (LPD8808_PARAM_LED_CNT * LUKE_POINTS_PER_LED)
@@ -48,11 +53,14 @@ static thread_t *_main_thread = NULL;
 static const char corerd_server_addr[] = CORERD_SERVER_ADDR;
 static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
                             void *ctx);
+static ssize_t _luke_difficulty(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                                void *ctx);
 
 static lpd8808_t _dev;
 static color_rgb_t _color_map[LPD8808_PARAM_LED_CNT];
 static color_rgb_t _leds[LPD8808_PARAM_LED_CNT];
 static const coap_resource_t _resources[] = {
+    { LUKE_DISPLAY_PREFIX LUKE_PATH_DIFFICULTY, COAP_POST | COAP_GET, _luke_difficulty, NULL },
     { LUKE_DISPLAY_PREFIX LUKE_PATH_POINTS, COAP_POST | COAP_GET, _luke_points, NULL },
     { LUKE_DISPLAY_PREFIX LUKE_PATH_TARGET, COAP_POST | COAP_GET, luke_set_target, NULL },
     { LUKE_PATH_REBOOT, COAP_POST, luke_reboot, NULL },
@@ -66,7 +74,8 @@ static mutex_t _points_mutex = MUTEX_INIT;
 static uint16_t _points = 64U;
 static uint16_t _last_notified;
 static uint8_t _in_victory_cond = 0U;
-static volatile uint8_t _difficulty = ATOMIC_VAR_INIT(LUKE_DIFFICULTY_DEFAULT);
+static volatile uint8_t _difficulty = LUKE_DIFFICULTY_DEFAULT;
+static volatile uint8_t _last_reported_difficulty = !LUKE_DIFFICULTY_DEFAULT;
 
 static void _notify_points(void)
 {
@@ -75,7 +84,7 @@ static void _notify_points(void)
 
     /* send Observe notification for /luke/points */
     switch (gcoap_obs_init(&pdu, &buf[0], GCOAP_PDU_BUF_SIZE,
-            &_resources[0])) {
+            &_resources[1])) {
         case GCOAP_OBS_INIT_OK: {
             size_t payload_len = sprintf((char *)pdu.payload, LUKE_POINTS_FMT,
                                          _points);
@@ -85,7 +94,7 @@ static void _notify_points(void)
                    (char *)pdu.payload, (unsigned)payload_len);
             len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
             printf("The CoAP message has %u byte\n", (unsigned)len);
-            gcoap_obs_send(&buf[0], len, &_resources[0]);
+            gcoap_obs_send(&buf[0], len, &_resources[1]);
             break;
         }
         default:
@@ -182,7 +191,34 @@ static ssize_t _luke_points(coap_pkt_t* pdu, uint8_t *buf, size_t len,
     }
 }
 
-static void _set_difficulty(void *arg)
+static void _notify_difficulty(void)
+{
+    uint8_t buf[GCOAP_PDU_BUF_SIZE];
+    coap_pkt_t pdu;
+
+    /* send Observe notification for /luke/points */
+    switch (gcoap_obs_init(&pdu, &buf[0], GCOAP_PDU_BUF_SIZE,
+            &_resources[0])) {
+        case GCOAP_OBS_INIT_OK: {
+            size_t payload_len = sprintf((char *)pdu.payload,
+                                         LUKE_DIFFICULTY_FMT,
+                                         _difficulty);
+            size_t len;
+
+            _last_reported_difficulty = _difficulty;
+            printf("Sending '%s' (%u bytes) to observers\n",
+                   (char *)pdu.payload, (unsigned)payload_len);
+            len = gcoap_finish(&pdu, payload_len, COAP_FORMAT_JSON);
+            printf("The CoAP message has %u byte\n", (unsigned)len);
+            gcoap_obs_send(&buf[0], len, &_resources[0]);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+static void _incr_difficulty(void *arg)
 {
     (void)arg;
     if (_difficulty++ >= LUKE_DIFFICULTY_MAX) {
@@ -192,6 +228,48 @@ static void _set_difficulty(void *arg)
     _points = (((uint16_t)_difficulty) * LUKE_POINTS_MAX) / LUKE_DIFFICULTY_MAX;
     /* possibly need to wake-up main thread to decrement points again */
     thread_flags_set(_main_thread, LUKE_THREAD_FLAG_DEC);
+}
+
+static ssize_t _luke_difficulty(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                                void *ctx)
+{
+    unsigned d = 0;
+    size_t payload_len = 0;
+
+    puts("luke difficulty");
+    (void)ctx;
+    switch (coap_method2flag(coap_get_code_detail(pdu))) {
+        case COAP_GET: {
+            gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+            payload_len = sprintf((char *)pdu->payload, LUKE_DIFFICULTY_FMT,
+                                  _difficulty);
+            return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
+        }
+        case COAP_POST: {
+            unsigned content_type = coap_get_content_type(pdu);
+            if ((pdu->payload_len < LUKE_DIFFICULTY_MIN_SIZE) ||
+                (pdu->payload_len > LUKE_DIFFICULTY_MAX_SIZE) ||
+                (content_type != COAP_FORMAT_JSON) ||
+                (sscanf((char *)pdu->payload, LUKE_DIFFICULTY_FMT, &d) != 1)) {
+                printf("(%u < %u) || (%u > %u) || (%u != %u) || "
+                       "(payload unparsable)\n", pdu->payload_len,
+                       LUKE_DIFFICULTY_MIN_SIZE, pdu->payload_len,
+                       LUKE_DIFFICULTY_MAX_SIZE, content_type,
+                      COAP_FORMAT_JSON);
+                return gcoap_response(pdu, buf, len, COAP_CODE_BAD_REQUEST);
+            }
+            else {
+                _notify_difficulty();
+                gcoap_resp_init(pdu, buf, len, COAP_CODE_VALID);
+                _difficulty = (d == 0) ? 1 : (d > 10) ? 10 : d;
+                payload_len = sprintf((char *)pdu->payload, LUKE_DIFFICULTY_FMT,
+                                      _difficulty);
+                return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
+            }
+        }
+        default:
+            return 0;
+    }
 }
 
 static void _init_color_map(void)
@@ -218,7 +296,7 @@ int main(void)
     xtimer_ticks32_t now;
 
     _main_thread = (thread_t *)sched_active_thread;
-    gpio_init_int(BTN0_PIN, BTN0_MODE, GPIO_FALLING, _set_difficulty, NULL);
+    gpio_init_int(BTN0_PIN, BTN0_MODE, GPIO_FALLING, _incr_difficulty, NULL);
     lpd8808_init(&_dev, &lpd8808_params[0]);
     lpd8808_load_rgb(&_dev, _leds);
     puts("Sleeping for 7 seconds");
@@ -245,6 +323,9 @@ int main(void)
             LED0_OFF;
         }
         _decrement_points(LUKE_POINT_DROP_VALUE);
+        if (_difficulty != _last_reported_difficulty) {
+            _notify_difficulty();
+        }
         timeout = LUKE_POINT_DROP_TIMEOUT_MAX -
             ((LUKE_POINT_DROP_TIMEOUT_MAX * (_difficulty - 1)) /
              LUKE_DIFFICULTY_MAX);

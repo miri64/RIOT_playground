@@ -116,7 +116,7 @@ int main(void)
     gpio_init(DINO_MOVE_PIN, GPIO_OUT);
 
     /* warte ein wenig, bis sich das Netzwerk konfiguriert hat */
-    xtimer_sleep(7);
+    xtimer_sleep(2);
 
     /* Registriere die CoAP-Server Definition */
     gcoap_register_listener(&_listener);

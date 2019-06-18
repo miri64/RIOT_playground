@@ -1,6 +1,8 @@
 # RIOT version
 
-- use 2019.04 for now
+- use [255a5cd] as earliest version for fixed duplicate address detection
+
+[255a5cd]: https://github.com/RIOT-OS/RIOT/commit/255a5cd0a60aef51fc20c7fa2c3aefca24348184
 
 # Config
 

@@ -1,0 +1,6 @@
+aiofiles
+jinja2
+pexpect
+pyserial
+riotctrl
+tornado

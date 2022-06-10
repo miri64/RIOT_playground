@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Eavesdropper{% endblock title %}</title>
+    <link href="{{ static_url("bootstrap.min.css") }}" rel="stylesheet">
+    <link href="{{ static_url("jquery-ui.min.css") }}" rel="stylesheet">
+    <script src="{{ static_url("jquery-3.6.0.min.js") }}"></script>
+    <script src="{{ static_url("jquery-ui.min.js") }}"></script>
+    <style>
+      h6.eavesdropper-guess {
+        min-height: 3em;
+      }
+      td.pkg-field {
+        border: solid black 1px;
+        height: 2em;
+        text-align: center;
+        font-size: 50%;
+      }
+      td.ipv6-field {
+        background-color: #a6cee3;
+      }
+      td.udp-field {
+        background-color: #cab2d6;
+      }
+      td.dns-field {
+        background-color: #fb9a99;
+      }
+      td.coap-field {
+        background-color: #fdbf6f;
+      }
+      td.oscore-field {
+        background-color: #b2df8a;
+      }
+    </style>
+  </head>
+  <body>
+    {% block body %}
+    <div class="container">
+      {% block header %}
+      <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+        <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+          <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
+          <span class="fs-4">Eavesdropper</span>
+        </a>
+
+        {% block nav %}
+        <ul class="nav nav-pills">
+        </ul>
+        {% endblock nav %}
+      </header>
+      {% endblock header %}
+      {% block content %}
+      <div class="container">
+        <div class="row">
+          <div class="col text-center">
+            <div style="height: 300px">
+              <p id="eavesdropper"></p>
+            </div>
+            <p id="curr-pkg" class="text-center">
+            </p>
+          </div>
+          <div class="col-8" style="height: 600px;">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col"></th>
+                  <th scope="col">Message</th>
+                </tr>
+              </thead>
+              <tbody id="table">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endblock content %}
+    {% endblock body %}
+    <script src="{{ static_url("bootstrap.bundle.min.js") }}"></script>
+    <script>
+var ws = new WebSocket("ws://{{ host }}{{ sniffer_ws }}");
+
+function hex2a(hex) {
+  /* https://stackoverflow.com/a/13698172 */
+  var str = '';
+  for (var i = 0; i < hex.length; i += 2) {
+    var v = parseInt(hex.substr(i, 2), 16);
+    if (v) str += String.fromCharCode(v);
+  }
+  return str;
+}  
+
+function pkt_head() {
+  return "<tr>" +
+    ("<td width=\"" + (100 / 32) + "%\"></td>").repeat(32) +
+  "</tr>"
+}
+
+function ipv6_hdr(pkg) {
+  return "<tr>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"4\">V: " + pkg.ipv6.version + "</td>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"8\">TC: " + pkg.ipv6.tc + "</td>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"20\">Flow Label: " + pkg.ipv6.fl + "</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"16\">Length: " + pkg.ipv6.plen + "</td>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"8\">NH: " + pkg.ipv6.nh + "</td>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"8\">HL: " + pkg.ipv6.hlim + "</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"32\">Src: [" + pkg.ipv6.src + "]</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field ipv6-field\" colspan=\"32\">Dst: [" + pkg.ipv6.dst + "]</td>" +
+  "</tr>";
+}
+
+function udp_hdr(pkg) {
+  return "<tr>" +
+    "<td class=\"pkg-field udp-field\" colspan=\"16\">SPort: " + pkg.udp.sport + "</td>" +
+    "<td class=\"pkg-field udp-field\" colspan=\"16\">DPort: " + pkg.udp.dport + "</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field udp-field\" colspan=\"16\">Length: " + pkg.udp.len + "</td>" +
+    "<td class=\"pkg-field udp-field\" colspan=\"16 \">Checksum: " + pkg.udp.chksum + "</td>" +
+  "</tr>";
+}
+
+function dns_hdr(pkg) {
+  return "<tr>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"16\">ID: " + pkg.dns.id + "</td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"4\">" + pkg.dns.opcode + "</td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"1\"></td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"4\">" + pkg.dns.rcode + "</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"16\">Question: " + pkg.dns.qdcount + "</td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"16 \">Answers: " + pkg.dns.ancount + "</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"16\">Nameserver: " + pkg.dns.nscount + "</td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"16 \">Additional: " + pkg.dns.arcount + "</td>" +
+  "</tr>";
+}
+
+function dns_qd(pkg) {
+  return "<tr>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"32\">Name: " +
+        hex2a(pkg.dns.qd.dns_question_record.qname) + "</td>" +
+    "</tr>" +
+    "<tr>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"16\">Type: " +
+        ((pkg.dns.qd.dns_question_record.qtype == 1)
+         ? "A" : ((pkg.dns.qd.dns_question_record.qtype == 28)
+                  ? "AAAA" : pkg.dns.qd.dns_question_record.qtype)) + "</td>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"16\">Class: " +
+        ((pkg.dns.qd.dns_question_record.qclass == 1)
+         ? "IN" : pkg.dns.qd.dns_question_record.qclass) + "</td>" +
+    "</tr>";
+}
+
+function dns_an(pkg) {
+  return "<tr>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"32\">Name: " +
+        hex2a(pkg.dns.an.dns_resource_record.rrname) + "</td>" +
+    "</tr>" +
+    "<tr>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"16\">Type: " +
+        ((pkg.dns.an.dns_resource_record.type == 1)
+         ? "A" : ((pkg.dns.an.dns_resource_record.type == 28)
+                  ? "AAAA" : pkg.dns.an.dns_resource_record.type)) + "</td>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"16\">Class: " +
+        ((pkg.dns.an.dns_resource_record.rclass == 1)
+         ? "IN" : pkg.dns.an.dns_resource_record.rclass) + "</td>" +
+    "</tr>" +
+    "<tr>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"32\">TTL: " + pkg.dns.an.dns_resource_record.ttl + "</td>" +
+    "</tr>" +
+    "<tr>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"32\">RData: " + pkg.dns.an.dns_resource_record.rdata + "</td>" +
+    "</tr>";
+}
+
+function coap_hdr(pkg) {
+  return "<tr>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"2\">" + pkg.coap.ver + "</td>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"2\">" + pkg.coap.type + "</td>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"4\">" + pkg.coap.tkl + "</td>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"8\">Code: " + (pkg.coap.code >> 5) + "." +
+      ('0' + (pkg.coap.code & 0x1f)).slice(-2) + "</td>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"16\">" + pkg.coap.msg_id + "</td>" +
+  "</tr>" +
+  "<tr>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"16\">Token: 0x" + pkg.coap.token + "</td>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"14\">OSCORE</td>" +
+    "<td class=\"pkg-field coap-field\" colspan=\"2\">0xff</td>" +
+  "</tr>";
+}
+
+function oscore_hdr(pkg) {
+  console.log(pkg.raw.load.length);
+  console.log(pkg.raw.load.length / 32);
+  console.log(2 * pkg.raw.load.length / 32);
+  return "<tr>" +
+    "<td class=\"pkg-field oscore-field\" colspan=\"32\" style=\"height: "
+      + (2 * Math.ceil(pkg.raw.load.length / 32 + 1)) + "em\">???</td>" +
+  "</tr>";
+}
+
+ws.onmessage = function (evt) {
+  var obj = JSON.parse(evt.data);
+  if ("time" in obj && "pkg" in obj) {
+    var pkg = obj.pkg;
+    var time = new Date(obj.time * 1000);
+    var data;
+    var cls;
+    var direction;
+    var image;
+    var curr_pkg = $("#curr-pkg");
+    var shake_opts;
+
+    if ("dns" in pkg) {
+      data;
+      cls = "table-danger";
+      direction = (pkg.dns.qr) ? "&#8592;" : "&#8594;";
+      image = "{{ static_url("Smiley_devil_grin.svg") }}"
+      shake_opts = {direction: "up", queue: false, duration: 500};
+
+      if (pkg.dns.qr && pkg.dns.an) {
+        var name = hex2a(pkg.dns.an.dns_resource_record.rrname).slice(0, -1);
+        var answer = pkg.dns.an.dns_resource_record.rdata;
+
+        data = name + " is <tt>" + answer + "</tt>";
+        curr_pkg.find(".eavesdropper-guess").first().html(data);
+        curr_pkg.find(".row").append(
+          "<div class=\"col-6\">" +
+          "<table class=\"w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
+          dns_qd(pkg) + dns_an(pkg) +
+          "</table></div>")
+      }
+      else if(pkg.dns.qd) {
+        var name = hex2a(pkg.dns.qd.dns_question_record.qname).slice(0, -1);
+
+        data = "Who is " + name + "?";
+        $("#curr-pkg").text("");
+        curr_pkg.append(
+          "<h6 class=\"text-danger eavesdropper-guess\">" + data + "</h6>" +
+          "<div class=\"container\"><div class=\"row\"><div class=\"col-6\">" +
+          "<table class=\"w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
+          dns_qd(pkg) +
+          "</table></div></div></div>")
+      }
+      else {
+        return;
+      }
+    }
+    else if ("coap" in pkg) {
+      data = "???";
+      cls = "table-success";
+      direction = (pkg.coap.code & (0x7 << 5)) ? "&#8592;" : "&#8594;"
+      image = "{{ static_url("Smiley_devil_sad.svg") }}"
+      shake_opts = {direction: "left", queue: false, times: 2, duration: 1000};
+
+      if (pkg.coap.code == 0x02) {
+        data = "CoAP POST for ???"
+        $("#curr-pkg").text("");
+        curr_pkg.append(
+          "<h6 class=\"text-success eavesdropper-guess\">" + data + "</h6>" +
+          "<div class=\"container\"><div class=\"row\"><div class=\"col-6\">" +
+          "<table class=\"w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
+          oscore_hdr(pkg) +
+          "</table></div></div></div>")
+      }
+      else if (pkg.coap.code == 68) {
+        data = "??? Changed"
+        curr_pkg.find(".eavesdropper-guess").first().html(data);
+        curr_pkg.find(".row").append(
+          "<div class=\"col-6\">" +
+          "<table class=\"w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
+          oscore_hdr(pkg) +
+          "</table></div>")
+      }
+    }
+    else {
+      return;
+    }
+    $(
+      "<tr class=\"" + cls + "\" style=\"display: none;\"><td>" +
+      ('0' + time.getHours()).slice(-2) + ":" +
+      ('0' + time.getMinutes()).slice(-2) + ":" +
+      ('0' + time.getSeconds()).slice(-2) + "." +
+      ('00' + time.getMilliseconds()).slice(-3) +
+      "</td><td>" + direction +
+      "</td><td>" + data + "</td>" +
+      "</tr>"
+    ).prependTo("#table").slideDown(1000000);
+    while ($("#table tr").length > 18) {
+      var row = $("#table tr").last()
+      row.slideUp(1000000);
+      row.remove()
+    }
+    $("#eavesdropper").html("<img src=\"" + image + "\" class=\"img-responsive w-75\" />");
+    $("#eavesdropper").effect("shake", shake_opts);
+  }
+}
+    </script>
+  </body>
+</html>

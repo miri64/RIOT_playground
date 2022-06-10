@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Name Obfuscation Demo{% endblock title %}</title>
+    <link href="{{ static_url("bootstrap.min.css") }}" rel="stylesheet">
+    <script src="{{ static_url("jquery-3.6.0.min.js") }}"></script>
+  </head>
+  <body>
+    {% block body %}
+    <div class="container">
+      {% block header %}
+      <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+        <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+          <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
+          <span class="fs-4">Name Obfuscation Demo</span>
+        </a>
+
+        {% block nav %}
+        <ul class="nav nav-pills">
+          <li class="nav-item"><a href="/" class="nav-link active" aria-current="page">Home</a></li>
+          <li class="nav-item"><a href="/term" class="nav-link">Debug Terminal</a></li>
+        </ul>
+        {% endblock nav %}
+      </header>
+      {% endblock header %}
+      {% block content %}
+      <div class="container">
+        <form id="name-demo">
+          <div class="row">
+            <div class="col">
+              <div class="mb-1">
+                <label for="name" class="form-label">Domain Name</label>
+                <input type="text" class="form-control" id="name" />
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-1">
+              <div class="mb-1 form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="crypto">
+                <label class="form-check-label" for="crypto">&#x1f512;</label>
+              </div>
+            </div>
+            <div class="col-2">
+              <div class="mb-1 form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="family">
+                <label class="form-check-label" for="family">IPv6</label>
+              </div>
+            </div>
+            <div class="col text-end">
+              <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+        </form>
+        <div class="row">
+          <div class="col">
+            <pre id="output"></pre>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col text-center" id="success">
+          </div>
+        </div>
+      </div>
+      {% endblock content %}
+    </div>
+    {% endblock body %}
+    <script src="{{ static_url("bootstrap.bundle.min.js") }}"></script>
+    <script>
+var ws = new WebSocket("ws://{{ host }}{{ riotctrl_ws }}");
+
+if ($("#terminal").length > 0) {
+  ws.onmessage = function (evt) {
+    var obj = JSON.parse(evt.data);
+    if ("line" in obj) {
+      $("#terminal").append(obj.line);
+      $("#terminal").scrollTop($("#terminal")[0].scrollHeight)
+    }
+  }
+}
+$("#name-demo").submit(function (evt) {
+  evt.preventDefault();
+  $("#output").empty()
+  $("#success").empty()
+  ws.onmessage = function (evt) {
+    var obj = JSON.parse(evt.data);
+    if ("shell_reply" in obj) {
+      var match = obj.shell_reply.match(/Hostname (.*) resolves to (.*) \(IPv[46]\)/);
+      if (match) {
+        $("#success").append("<h1 class=\"h1 text-success\">&#x2713; " + match[2] + "</h1>");
+      }
+      else {
+        $("#output").append(obj.shell_reply);
+        $("#success").append("<h1 class=\"display-1 text-danger\">&#x2717;</h1>");
+      }
+    }
+  }
+  var cmd = "dns "
+  var family = "inet"
+  if ($("#crypto:checked").val()) {
+    cmd = "doc "
+  }
+  if ($("#family:checked").val()) {
+    family = "inet6"
+  }
+  ws.send(cmd + $("#name").val() + " " + family);
+});
+$("#command-input").submit(function (evt) {
+  evt.preventDefault();
+  ws.onmessage = function (evt) {
+    var obj = JSON.parse(evt.data);
+    if ("line" in obj) {
+      $("#terminal").append(obj.line)
+      $("#terminal").scrollTop($("#terminal")[0].scrollHeight)
+    }
+  }
+  ws.send($("#command").val());
+});
+    </script>
+  </body>
+</html>

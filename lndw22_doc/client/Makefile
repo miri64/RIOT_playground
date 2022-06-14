@@ -24,4 +24,9 @@ FEATURES_REQUIRED += periph_gpio_irq
 
 CFLAGS += -DOSCORE_NANOCOAP_MEMMOVE_MODE
 
+DEFAULT_CHANNEL ?= 25
+
 include $(RIOTBASE)/Makefile.include
+
+# Set a custom channel if needed
+include $(RIOTMAKE)/default-radio-settings.inc.mk

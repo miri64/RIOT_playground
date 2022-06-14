@@ -81,6 +81,7 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
             self.logfile = await aiofiles.open(self.ctrl.logfile)
         if self.shell is None:
             await self.config_node()
+        self.shell.cmd("switch")
         tornado.ioloop.IOLoop.current().asyncio_loop.create_task(self.send_lines())
 
     async def on_message(self, message):
@@ -91,6 +92,7 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
         except (pexpect.TIMEOUT, pexpect.EOF) as exc:
             logging.error(exc)
             await self.config_node()
+            self.shell.cmd("switch")
 
     def on_close(self):
         tornado.ioloop.IOLoop.current().asyncio_loop.create_task(self.close_logfile())

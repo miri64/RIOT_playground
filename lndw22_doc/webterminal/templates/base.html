@@ -80,6 +80,19 @@ if ($("#terminal").length > 0) {
     }
   }
 }
+if ($("#name-demo").length > 0) {
+  ws.onmessage = function (evt) {
+    var obj = JSON.parse(evt.data);
+    if ("line" in obj && obj.line.includes("Switch is")) {
+      if (obj.line.includes("Switch is ON")) {
+        $("#crypto").prop("checked", true);
+      }
+      if (obj.line.includes("Switch is OFF")) {
+        $("#crypto").prop("checked", false);
+      }
+    }
+  }
+}
 $("#name-demo").submit(function (evt) {
   evt.preventDefault();
   $("#output").empty()
@@ -94,6 +107,14 @@ $("#name-demo").submit(function (evt) {
       else {
         $("#output").append(obj.shell_reply);
         $("#success").append("<h1 class=\"display-1 text-danger\">&#x2717;</h1>");
+      }
+    }
+    if ("line" in obj && obj.line.includes("Switch is")) {
+      if (obj.line.includes("Switch is ON")) {
+        $("#crypto").prop("checked", true);
+      }
+      if (obj.line.includes("Switch is OFF")) {
+        $("#crypto").prop("checked", false);
       }
     }
   }

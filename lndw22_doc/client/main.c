@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "event/thread.h"
 #include "fmt.h"
 #include "net/af.h"
 #include "net/coap.h"
@@ -28,6 +29,7 @@
 #include "net/ipv4/addr.h"
 #include "net/ipv6/addr.h"
 #include "net/sock/dns.h"
+#include "periph/gpio.h"
 #include "od.h"
 #include "shell.h"
 
@@ -40,12 +42,16 @@
 #include "oscore_native/crypto.h"
 #endif
 
+#define SWITCH_GPIO         GPIO_PIN(PA, 7)
+
 #define PSK_ID_LEN          32U
 #define PSK_LEN             32U
 
 #define TEST_TAG            2599U
 #define TEST_PSK_ID         "client_identity"
 #define TEST_PSK            "secretPSK"
+
+static void _check_switch_event_handler(event_t *event);
 
 static char line_buf[512U];
 static char _psk_id[PSK_ID_LEN];
@@ -62,6 +68,9 @@ static credman_credential_t _credential = {
 static uint8_t _mock_response[CONFIG_DNS_MSG_LEN];
 static size_t _mock_response_len = 0U;
 static uint8_t _resp_code = COAP_CODE_EMPTY;
+static event_t _check_switch_event = {
+    .handler = _check_switch_event_handler,
+};
 
 #if IS_USED(MODULE_GCOAP_DTLS)
 static_assert(CONFIG_GCOAP_DNS_CREDS_MAX == CONFIG_DTLS_CREDENTIALS_MAX,
@@ -80,6 +89,29 @@ static_assert(!IS_USED(MODULE_GCOAP_DTLS) ||
     strcpy((char *)_credential.params.psk.id.s, TEST_PSK_ID); \
     _credential.params.psk.key.len = sizeof(TEST_PSK); \
     strcpy((char *)_credential.params.psk.key.s, TEST_PSK)
+
+static void _check_switch(void) {
+    if (gpio_read(SWITCH_GPIO)) {
+        puts("Switch is OFF");
+    }
+    else {
+        puts("Switch is ON");
+    }
+}
+
+static void _check_switch_event_handler(event_t *event)
+{
+    (void)event;
+    _check_switch();
+}
+
+static int _check_switch_shell_handler(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+    _check_switch();
+    return 0;
+}
 
 static void _uri_usage(const char *cmd)
 {
@@ -519,6 +551,7 @@ static int _resp(int argc, char **argv)
 }
 
 static const shell_command_t _shell_commands[] = {
+    { "switch", "Checks if the switch is off or on", _check_switch_shell_handler },
     { "uri", "Sets URI to DoC server", _set_uri},
     { "server", "Sets DNS server", _dns_server },
     { "creds", "Adds/removes credentials for DoC server", _creds},
@@ -532,8 +565,14 @@ static const shell_command_t _shell_commands[] = {
     { NULL, NULL, NULL }
 };
 
+static void _gpio_irq(void *arg)
+{
+    event_post(EVENT_PRIO_MEDIUM, arg);
+}
+
 int main(void)
 {
+    gpio_init_int(SWITCH_GPIO, GPIO_IN_PU, GPIO_BOTH, _gpio_irq, &_check_switch_event);
     shell_run(_shell_commands, line_buf, sizeof(line_buf));
     return 0;
 }

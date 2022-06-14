@@ -6,6 +6,7 @@ BOARD ?= samr21-xpro
 RIOTBASE ?= $(CURDIR)/../../../RIOT
 
 USEMODULE += auto_init_gnrc_netif
+USEMODULE += event_thread
 USEMODULE += fmt
 USEMODULE += ipv4_addr
 USEMODULE += ipv6_addr
@@ -17,6 +18,8 @@ USEMODULE += od
 USEMODULE += shell
 USEMODULE += shell_commands
 USEMODULE += sock_dns
+
+FEATURES_REQUIRED += periph_gpio_irq
 
 CFLAGS += -DOSCORE_NANOCOAP_MEMMOVE_MODE
 

@@ -6,6 +6,8 @@
 #
 # Distributed under terms of the MIT license.
 
+import gettext
+
 import jinja2
 import tornado
 
@@ -19,8 +21,23 @@ class TemplateRendering:
         template_dirs = []
         if self.settings.get("template_path", ""):
             template_dirs.append(self.settings["template_path"])
+        if self.settings.get("locale_path", ""):
+            trans = gettext.translation(
+                "application", self.settings["locale_path"], fallback=True
+            )
+        else:
+            trans = gettext
 
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dirs))
+        env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(template_dirs),
+            extensions=["jinja2.ext.i18n"],
+        )
+        env.install_gettext_callables(
+            gettext=trans.gettext,
+            ngettext=trans.ngettext,
+            pgettext=trans.pgettext,
+            npgettext=trans.npgettext,
+        )
 
         try:
             template = env.get_template(template_name)
@@ -53,5 +70,3 @@ class BaseTemplateHandler(tornado.web.RequestHandler, TemplateRendering):
         )
         content = self.render_template(template_name, **kwargs)
         self.write(content)
-
-

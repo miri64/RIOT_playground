@@ -178,5 +178,6 @@ if __name__ == "__main__":
         sniffer.start()
         app = make_app(out.name)
         app.settings["template_path"] = "templates"
+        app.settings["locale_path"] = "locales"
         app.listen(8889)
         tornado.ioloop.IOLoop.current().start()

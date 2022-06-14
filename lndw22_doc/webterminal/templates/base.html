@@ -100,6 +100,7 @@ $("#name-demo").submit(function (evt) {
   ws.onmessage = function (evt) {
     var obj = JSON.parse(evt.data);
     if ("shell_reply" in obj) {
+      obj.shell_reply = obj.shell_reply.replace(/^.*Switch is (ON|OFF).*$/mg, "");
       var match = obj.shell_reply.match(/Hostname (.*) resolves to (.*) \(IPv[46]\)/);
       if (match) {
         $("#success").append("<h1 class=\"h1 text-success\">&#x2713; " + match[2] + "</h1>");

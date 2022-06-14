@@ -173,7 +173,6 @@ if __name__ == "__main__":
     parser.add_argument("device")
     parser.add_argument("-c", "--channel", type=int, nargs="?", default=26)
     parser.add_argument("-b", "--baudrate", type=int, nargs="?", default=500000)
-
     args = parser.parse_args()
     scapy_conf.dot15d4_protocol = "sixlowpan"
     scapy_load_contrib("coap")

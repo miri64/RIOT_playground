@@ -45,6 +45,8 @@ class PktWebsocket(tornado.websocket.WebSocketHandler):
         self.pktfile_name = pktfile_name
         self.pktfile = None
         self.rb = None
+        self.logger = logging.getLogger(type(self).__name__)
+        self.logger.setLevel(logging.DEBUG)
 
     def _value_to_json_parsable(self, value):
         if value is not None and isinstance(value, (list, tuple)):
@@ -109,6 +111,8 @@ class PktWebsocket(tornado.websocket.WebSocketHandler):
                 ]
             self.write_message(json.dumps(obj))
             return True
+        else:
+            self.logger.debug("Not sending %f %r", time, pkg)
         return False
 
     async def send_pkts(self):
@@ -121,13 +125,13 @@ class PktWebsocket(tornado.websocket.WebSocketHandler):
                     if not m:
                         continue
                     pkg = Dot15d4(bytes.fromhex(m["data"])[: int(m["length"])])
-                    if not self._try_send(m["time"], pkg):
+                    if not self._try_send(float(m["time"]), pkg):
                         src, tag, res = self.rb.add(m["time"], pkg)
                         if res:
-                            self._try_send(m["time"], res, self.rb[src, tag])
+                            self._try_send(float(m["time"]), res, self.rb[src, tag])
                             self.rb.remove(src, tag)
             except (ValueError, tornado.websocket.WebSocketClosedError) as exc:
-                logging.info(exc)
+                self.logger.error(exc)
 
     async def close_pktfile(self):
         if self.pktfile is not None:

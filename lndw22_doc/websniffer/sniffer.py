@@ -20,6 +20,11 @@ import serial
 class AbstractRIOTSniffer(abc.ABC):
     @abc.abstractproperty
     @property
+    def logger(self):
+        raise NotImplementedError()
+
+    @abc.abstractproperty
+    @property
     def port(self):
         raise NotImplementedError()
 
@@ -53,7 +58,7 @@ class AbstractRIOTSniffer(abc.ABC):
             f"ifconfig {iface} raw",
             f"ifconfig {iface} promisc",
         ]:
-            logging.info(cmd)
+            self.logger.info(cmd)
             self.port.write("{cmd}\n".encode())
 
     def generate_outfile(self):
@@ -99,6 +104,8 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         self._port = None
         self._time_offset = None
         self._queue = asyncio.Queue()
+        self._logger = logging.getLogger(type(self).__name__)
+        self._init_logger()
 
     @property
     def baudrate(self):
@@ -111,6 +118,10 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         return self._port
 
     @property
+    def logger(self):
+        return self._logger
+
+    @property
     def out(self):
         return self._outfile
 
@@ -119,6 +130,9 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         if self._time_offset is None:
             raise ConnectionError("{self._device} is not connected")
         return self._time_offset
+
+    def _init_logger(self):
+        self._logger.setLevel(logging.INFO)
 
     def connect(self):
         self._port = serial.Serial(

@@ -158,19 +158,29 @@ static void _dns_server_usage(char *cmd)
 
 static int _dns_server(int argc, char **argv)
 {
-    if ((argc < 2) ||
-        ((argc > 1) && !inet_pton(AF_INET6, argv[1],
+    char addrstr[INET6_ADDRSTRLEN];
+
+    if (((argc > 1) && !inet_pton(AF_INET6, argv[1],
                                   sock_dns_server.addr.ipv6)) ||
         ((argc > 2) && ((sock_dns_server.port = atoi(argv[2])) == 0))) {
         _dns_server_usage(argv[0]);
         return 1;
     }
+    if (argc < 2) {
+        if (sock_dns_server.port) {
+            inet_ntop(AF_INET6, sock_dns_server.addr.ipv6, addrstr,
+                      sizeof(addrstr));
+            printf("DNS server: [%s]:%u\n", addrstr, sock_dns_server.port);
+        }
+        else {
+            puts("DNS server: -");
+        }
+        return 0;
+    }
     if (argc < 3) {
         sock_dns_server.port = SOCK_DNS_PORT;
     }
     if (sock_dns_server.port > 0) {
-        char addrstr[INET6_ADDRSTRLEN];
-
         inet_ntop(AF_INET6, sock_dns_server.addr.ipv6, addrstr,
                   sizeof(addrstr));
         printf("DNS server: [%s]:%u\n", addrstr, sock_dns_server.port);

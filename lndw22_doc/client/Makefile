@@ -13,6 +13,7 @@ USEMODULE += ipv6_addr
 USEMODULE += gcoap_dns
 USEMODULE += gcoap_dns_oscore
 USEMODULE += gnrc_ipv6_default
+USEMODULE += gnrc_ipv6_nib_dns
 USEMODULE += netdev_default
 USEMODULE += od
 USEMODULE += shell

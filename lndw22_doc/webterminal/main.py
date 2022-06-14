@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 
@@ -31,9 +32,12 @@ except ImportError:
 
 
 class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
-    def initialize(self, ctrl, server_addr, userctx):
+    SHELL_TIMEOUT = 120
+
+    def initialize(self, ctrl, userctx, server_addr=None):
         self.ctrl = ctrl
         self.server_addr = server_addr
+        self.auto_config_server = server_addr is None
         self.userctx = userctx
         self.shell = None
         self.logfile = None
@@ -43,8 +47,19 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
             try:
                 self.shell = riotctrl.shell.ShellInteraction(self.ctrl)
                 self.ctrl.reset()
+                if self.auto_config_server:
+                    while self.server_addr is None:
+                        m = re.search(
+                            r"DNS server: \[([0-9a-fA-F:]+)\]:\d+",
+                            self.shell.cmd(f"server"),
+                        )
+                        if m:
+                            self.server_addr = m[1]
+                        await asyncio.sleep(1)
+                else:
+                    self.shell.cmd(f"server {self.server_addr}")
                 self.shell.cmd(f"uri coap://[{self.server_addr}]/dns")
-                self.shell.cmd(f"server {self.server_addr}")
+                # self.shell.cmd(f"server {self.server_addr}")
                 self.shell.cmd(
                     f"userctx -i {self.userctx['alg_num']} {self.userctx['common_iv']}"
                 )
@@ -61,7 +76,7 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
             except (pexpect.TIMEOUT, pexpect.EOF) as exc:
                 logging.error(exc)
                 await asyncio.sleep(3)
-                self.ctrl.start_term()
+                self.ctrl.start_term(timeout=self.SHELL_TIMEOUT)
 
     async def send_lines(self):
         while self.logfile is not None:
@@ -110,14 +125,14 @@ class TerminalHandler(tornado_jinja2.BaseTemplateHandler):
         return self.render2("terminal.html", **data)
 
 
-def make_app(ctrl, server_addr, userctx):
+def make_app(ctrl, userctx):
     return tornado.web.Application(
         [
             (r"/", MainHandler),
             (
                 r"/riotshell-ws",
                 RIOTShellWebsocket,
-                {"ctrl": ctrl, "server_addr": server_addr, "userctx": userctx},
+                {"ctrl": ctrl, "userctx": userctx},
             ),
             (r"/term", TerminalHandler),
         ],
@@ -143,8 +158,7 @@ if __name__ == "__main__":
             if args.port:
                 env["PORT"] = args.port
             ctrl = RIOTCtrl(args.application, logfile=logfile.name, env=env)
-            with ctrl.run_term():
-                server_addr = "2001:db8:1::1"
+            with ctrl.run_term(timeout=RIOTShellWebsocket.SHELL_TIMEOUT):
                 userctx = {
                     "alg_num": "10",
                     "common_iv": "85694ff94440dc9bc07cd15ce3",
@@ -153,7 +167,7 @@ if __name__ == "__main__":
                     "recipient_id": "01",
                     "recipient_key": "e7bf5cfe6339302a7aae30caf46f6a38",
                 }
-                app = make_app(ctrl, server_addr, userctx)
+                app = make_app(ctrl, userctx)
                 app.settings["template_path"] = os.path.join(
                     os.path.dirname(__file__), "templates"
                 )

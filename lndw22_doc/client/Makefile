@@ -20,6 +20,8 @@ USEMODULE += shell
 USEMODULE += shell_commands
 USEMODULE += sock_dns
 
+FEATURES_REQUIRED += periph_flashpage
+FEATURES_REQUIRED += periph_flashpage_in_address_space
 FEATURES_REQUIRED += periph_gpio_irq
 
 CFLAGS += -DOSCORE_NANOCOAP_MEMMOVE_MODE

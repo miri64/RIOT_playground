@@ -145,9 +145,16 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         )
 
     def run(self, *args, **kwargs):
-        self.connect()
-        self.config(self._channel)
-        self.generate_outfile()
+        while True:
+            try:
+                self.connect()
+                self.config(self._channel)
+                self.generate_outfile()
+                return
+            except serial.SerialException as exc:
+                self.port.close()
+                self.logger.error(exc)
+                time.sleep(5)
 
 
 class InterfaceSniffer(threading.Thread):

@@ -16,6 +16,8 @@ import time
 
 import serial
 
+from scapy.all import sniff, raw
+
 
 class AbstractRIOTSniffer(abc.ABC):
     @abc.abstractproperty
@@ -103,7 +105,6 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         self._outfile = outfile
         self._port = None
         self._time_offset = None
-        self._queue = asyncio.Queue()
         self._logger = logging.getLogger(type(self).__name__)
         self._init_logger()
 
@@ -143,3 +144,37 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         self.connect()
         self.config(self._channel)
         self.generate_outfile()
+
+
+class InterfaceSniffer(threading.Thread):
+    def __init__(self, device, outfile=sys.stdout):
+        super().__init__()
+        self._device = device
+        self._outfile = outfile
+        self._logger = logging.getLogger(type(self).__name__)
+        self._init_logger()
+
+    def _init_logger(self):
+        self._logger.setLevel(logging.INFO)
+
+    @property
+    def out(self):
+        return self._outfile
+
+    def run(self, *args, **kwargs):
+        self.generate_outfile()
+
+    def generate_outfile(self):
+        # count incoming packets
+        count = 0
+        print(self.out.name, file=sys.stderr)
+        print(f"RX: {count}", file=sys.stderr, end="\r")
+        while True:
+            pkt = sniff(iface=self._device, count=1)[0]
+            data = raw(pkt)
+
+            self.out.write("\n")
+            self.out.write(f"{pkt.time}:{len(data)}:{data.hex()}")
+            count += 1
+            print(f"RX: {count}", file=sys.stderr, end="\r")
+            self.out.flush()

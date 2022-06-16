@@ -11,6 +11,7 @@ import collections
 import json
 import logging
 import os
+import psutil
 import re
 import sys
 import tempfile
@@ -31,10 +32,10 @@ from scapy.contrib.coap import CoAP
 
 try:
     from .sixlowpan import SixlowpanReassembly
-    from .sniffer import TTYRIOTSniffer
+    from .sniffer import TTYRIOTSniffer, InterfaceSniffer
 except ImportError:
     from sixlowpan import SixlowpanReassembly
-    from sniffer import TTYRIOTSniffer
+    from sniffer import TTYRIOTSniffer, InterfaceSniffer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "pythonlibs"))
 import tornado_jinja2  # noqa: E402
@@ -168,6 +169,16 @@ def make_app(pktfile):
     )
 
 
+def get_sniffer(args, out):
+    if args.device in psutil.net_if_addrs():
+        sniffer = InterfaceSniffer(args.device, outfile=out)
+    elif args.device.startswith("/dev/") or args.device.startswith("COM"):
+        sniffer = TTYRIOTSniffer(args.device, args.channel, args.baudrate, outfile=out)
+    else:
+        raise ValueError(f"Unexpected device name {args.device}")
+    return sniffer
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("device")
@@ -177,7 +188,7 @@ if __name__ == "__main__":
     scapy_conf.dot15d4_protocol = "sixlowpan"
     scapy_load_contrib("coap")
     with tempfile.NamedTemporaryFile("w") as out:
-        sniffer = TTYRIOTSniffer(args.device, args.channel, args.baudrate, outfile=out)
+        sniffer = get_sniffer(args, out)
         sniffer.start()
         app = make_app(out.name)
         app.settings["template_path"] = "templates"

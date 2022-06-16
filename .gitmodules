@@ -1,0 +1,7 @@
+[submodule "lndw22_doc/liboscore"]
+	path = lndw22_doc/liboscore
+	url = https://gitlab.com/oscore/liboscore.git
+[submodule "lndw22_doc/RIOT"]
+	path = lndw22_doc/RIOT
+	url = git@github.com:miri64/RIOT.git
+	branch = gcoap_dns/enh/oscore

@@ -3,7 +3,7 @@ APPLICATION = lndw22_doc_client
 BOARD ?= samr21-xpro
 
 # This has to be the absolute path to the RIOT base directory:
-RIOTBASE ?= $(CURDIR)/../../../RIOT
+RIOTBASE ?= $(CURDIR)/../RIOT
 
 USEMODULE += auto_init_gnrc_netif
 USEMODULE += event_thread

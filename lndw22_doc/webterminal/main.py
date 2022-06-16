@@ -31,6 +31,9 @@ except ImportError:
     from loggable_riotctrl import RIOTCtrl
 
 
+shell = None
+
+
 class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
     SHELL_TIMEOUT = 120
 
@@ -39,39 +42,38 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
         self.server_addr = server_addr
         self.auto_config_server = server_addr is None
         self.userctx = userctx
-        self.shell = None
         self.logfile = None
 
     async def config_node(self):
         while True:
             try:
-                self.shell = riotctrl.shell.ShellInteraction(self.ctrl)
+                global shell
+                shell = riotctrl.shell.ShellInteraction(self.ctrl)
                 self.ctrl.reset()
                 if self.auto_config_server:
                     while self.server_addr is None:
                         m = re.search(
                             r"DNS server: \[([0-9a-fA-F:]+)\]:\d+",
-                            self.shell.cmd(f"server"),
+                            shell.cmd(f"server"),
                         )
                         if m:
                             self.server_addr = m[1]
                         await asyncio.sleep(1)
                 else:
-                    self.shell.cmd(f"server {self.server_addr}")
-                self.shell.cmd(f"uri coap://[{self.server_addr}]/dns")
-                # self.shell.cmd(f"server {self.server_addr}")
-                self.shell.cmd(
+                    shell.cmd(f"server {self.server_addr}")
+                shell.cmd(f"uri coap://[{self.server_addr}]/dns")
+                shell.cmd(
                     f"userctx -i {self.userctx['alg_num']} {self.userctx['common_iv']}"
                 )
-                self.shell.cmd(
+                shell.cmd(
                     f"userctx -s {self.userctx['sender_id']} "
                     f"{self.userctx['sender_key']}"
                 )
-                self.shell.cmd(
+                shell.cmd(
                     f"userctx -r {self.userctx['recipient_id']} "
                     f"{self.userctx['recipient_key']}"
                 )
-                self.shell.cmd("userctx -c")
+                shell.cmd("userctx -c")
                 return
             except (pexpect.TIMEOUT, pexpect.EOF) as exc:
                 logging.error(exc)
@@ -94,20 +96,23 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
     async def open(self):
         if self.logfile is None:
             self.logfile = await aiofiles.open(self.ctrl.logfile)
-        if self.shell is None:
+        if shell is None:
             await self.config_node()
-        self.shell.cmd("switch")
+        shell.cmd("switch")
         tornado.ioloop.IOLoop.current().asyncio_loop.create_task(self.send_lines())
 
     async def on_message(self, message):
         try:
             await self.write_message(
-                json.dumps({"shell_reply": self.shell.cmd(message)})
+                json.dumps({"shell_reply": shell.cmd(message)})
             )
         except (pexpect.TIMEOUT, pexpect.EOF) as exc:
             logging.error(exc)
             await self.config_node()
-            self.shell.cmd("switch")
+            shell.cmd("switch")
+        if message == "reboot":
+            await self.config_node()
+            shell.cmd("switch")
 
     def on_close(self):
         tornado.ioloop.IOLoop.current().asyncio_loop.create_task(self.close_logfile())
@@ -125,14 +130,14 @@ class TerminalHandler(tornado_jinja2.BaseTemplateHandler):
         return self.render2("terminal.html", **data)
 
 
-def make_app(ctrl, userctx):
+def make_app(ctrl, userctx, server_addr=None):
     return tornado.web.Application(
         [
             (r"/", MainHandler),
             (
                 r"/riotshell-ws",
                 RIOTShellWebsocket,
-                {"ctrl": ctrl, "userctx": userctx},
+                {"ctrl": ctrl, "userctx": userctx, "server_addr": server_addr},
             ),
             (r"/term", TerminalHandler),
         ],
@@ -146,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--board", type=str, nargs="?")
     parser.add_argument("-s", "--serial", type=str, nargs="?")
     parser.add_argument("-p", "--port", type=str, nargs="?")
+    parser.add_argument("-d", "--dns-server", type=str, nargs="?", default=None)
 
     args = parser.parse_args()
     with tempfile.NamedTemporaryFile("w") as logfile:
@@ -167,7 +173,7 @@ if __name__ == "__main__":
                     "recipient_id": "01",
                     "recipient_key": "e7bf5cfe6339302a7aae30caf46f6a38",
                 }
-                app = make_app(ctrl, userctx)
+                app = make_app(ctrl, userctx, server_addr=args.dns_server)
                 app.settings["template_path"] = os.path.join(
                     os.path.dirname(__file__), "templates"
                 )

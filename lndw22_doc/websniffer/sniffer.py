@@ -61,7 +61,11 @@ class AbstractRIOTSniffer(abc.ABC):
             f"ifconfig {iface} promisc",
         ]:
             self.logger.info(cmd)
-            self.port.write("{cmd}\n".encode())
+            self.port.write(f"{cmd}\n".encode())
+            line = ""
+            while not line.startswith("> "):
+                line = self.port.readline().decode()
+                self.logger.info(line)
 
     def generate_outfile(self):
         # count incoming packets

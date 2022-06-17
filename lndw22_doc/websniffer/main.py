@@ -11,7 +11,6 @@ import collections
 import json
 import logging
 import os
-import psutil
 import re
 import sys
 import tempfile
@@ -32,10 +31,10 @@ from scapy.contrib.coap import CoAP
 
 try:
     from .sixlowpan import SixlowpanReassembly
-    from .sniffer import TTYRIOTSniffer, InterfaceSniffer
+    from .sniffer import TTYRIOTSniffer
 except ImportError:
     from sixlowpan import SixlowpanReassembly
-    from sniffer import TTYRIOTSniffer, InterfaceSniffer
+    from sniffer import TTYRIOTSniffer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "pythonlibs"))
 import tornado_jinja2  # noqa: E402
@@ -170,9 +169,7 @@ def make_app(pktfile):
 
 
 def get_sniffer(args, out):
-    if args.device in psutil.net_if_addrs():
-        sniffer = InterfaceSniffer(args.device, outfile=out)
-    elif args.device.startswith("/dev/") or args.device.startswith("COM"):
+    if args.device.startswith("/dev/") or args.device.startswith("COM"):
         sniffer = TTYRIOTSniffer(args.device, args.channel, args.baudrate, outfile=out)
     else:
         raise ValueError(f"Unexpected device name {args.device}")

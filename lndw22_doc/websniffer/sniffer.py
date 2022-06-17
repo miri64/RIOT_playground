@@ -15,34 +15,33 @@ import time
 
 import serial
 
-from scapy.all import sniff, raw
-
 
 class AbstractRIOTSniffer(abc.ABC):
     @abc.abstractproperty
     @property
+    def channel(self):
+        raise NotImplementedError()  # pragma: no cover
+
+    @abc.abstractproperty
+    @property
     def logger(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @abc.abstractproperty
     @property
     def port(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @abc.abstractproperty
     @property
     def out(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     @abc.abstractmethod
     def connect(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
-    @abc.abstractmethod
-    def time_offset(self):
-        raise NotImplementedError()
-
-    def config(self, channel):
+    def config(self):
         self.port.write("ifconfig\n".encode())
         while True:
             line = self.port.readline()
@@ -55,7 +54,7 @@ class AbstractRIOTSniffer(abc.ABC):
 
         # set channel, raw mode, and promiscuous mode
         for cmd in [
-            f"ifconfig {iface} set chan {channel}",
+            f"ifconfig {iface} set chan {self.channel}",
             f"ifconfig {iface} raw",
             f"ifconfig {iface} promisc",
         ]:
@@ -79,8 +78,6 @@ class AbstractRIOTSniffer(abc.ABC):
             )
             if pkt_header:
                 now = time.time()
-                if length:
-                    self.out.write("\n")
                 length = int(pkt_header.group(1), 16)
                 self.out.write(f"{now}:{length}:")
                 count += 1
@@ -116,6 +113,10 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         return self._baudrate
 
     @property
+    def channel(self):
+        return self._channel
+
+    @property
     def port(self):
         if self._port is None:
             raise ConnectionError("{self._device} is not connected")
@@ -129,12 +130,6 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
     def out(self):
         return self._outfile
 
-    @property
-    def time_offset(self):
-        if self._time_offset is None:
-            raise ConnectionError("{self._device} is not connected")
-        return self._time_offset
-
     def _init_logger(self):
         self._logger.setLevel(logging.INFO)
 
@@ -147,44 +142,10 @@ class TTYRIOTSniffer(threading.Thread, AbstractRIOTSniffer):
         while True:
             try:
                 self.connect()
-                self.config(self._channel)
+                self.config()
                 self.generate_outfile()
                 return
             except serial.SerialException as exc:
                 self.port.close()
                 self.logger.error(exc)
                 time.sleep(5)
-
-
-class InterfaceSniffer(threading.Thread):
-    def __init__(self, device, outfile=sys.stdout):
-        super().__init__()
-        self._device = device
-        self._outfile = outfile
-        self._logger = logging.getLogger(type(self).__name__)
-        self._init_logger()
-
-    def _init_logger(self):
-        self._logger.setLevel(logging.INFO)
-
-    @property
-    def out(self):
-        return self._outfile
-
-    def run(self, *args, **kwargs):
-        self.generate_outfile()
-
-    def generate_outfile(self):
-        # count incoming packets
-        count = 0
-        print(self.out.name, file=sys.stderr)
-        print(f"RX: {count}", file=sys.stderr, end="\r")
-        while True:
-            pkt = sniff(iface=self._device, count=1)[0]
-            data = raw(pkt)
-
-            self.out.write("\n")
-            self.out.write(f"{pkt.time}:{len(data)}:{data.hex()}")
-            count += 1
-            print(f"RX: {count}", file=sys.stderr, end="\r")
-            self.out.flush()

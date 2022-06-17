@@ -176,7 +176,7 @@ def get_sniffer(args, out):
     return sniffer
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("device")
     parser.add_argument("-c", "--channel", type=int, nargs="?", default=26)
@@ -192,3 +192,7 @@ if __name__ == "__main__":
         app.settings["locale_path"] = "locales"
         app.listen(8889)
         tornado.ioloop.IOLoop.current().start()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

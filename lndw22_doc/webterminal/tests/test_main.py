@@ -8,7 +8,6 @@
 import os
 
 import tornado.testing
-import tornado.websocket
 
 from .. import main
 
@@ -20,7 +19,7 @@ class MockCtrl:  # pytest: disable=too-few-public-methods
 class TestMain(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         app = main.make_app(
-            ctrl=MockCtrl,
+            ctrl=MockCtrl(),
             userctx={
                 "alg_num": "b5",
                 "common_iv": "221c386f56a8cef818ba3a5bea",

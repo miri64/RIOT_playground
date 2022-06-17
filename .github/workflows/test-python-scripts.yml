@@ -21,7 +21,7 @@ jobs:
           - lndw22_doc/pythonlibs
           - lndw22_doc/websniffer
           - lndw22_doc/webterminal
-        python-version: ['3.10', '3.9', '3.8', '3.7']
+        python-version: ['3.10', '3.9']
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}

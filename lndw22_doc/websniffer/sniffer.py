@@ -6,7 +6,6 @@
 #
 # Distributed under terms of the MIT license.
 
-import asyncio
 import abc
 import logging
 import re

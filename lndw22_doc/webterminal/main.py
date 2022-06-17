@@ -54,7 +54,7 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
                     while self.server_addr is None:
                         m = re.search(
                             r"DNS server: \[([0-9a-fA-F:]+)\]:\d+",
-                            shell.cmd(f"server"),
+                            shell.cmd("server"),
                         )
                         if m:
                             self.server_addr = m[1]
@@ -103,9 +103,7 @@ class RIOTShellWebsocket(tornado.websocket.WebSocketHandler):
 
     async def on_message(self, message):
         try:
-            await self.write_message(
-                json.dumps({"shell_reply": shell.cmd(message)})
-            )
+            await self.write_message(json.dumps({"shell_reply": shell.cmd(message)}))
         except (pexpect.TIMEOUT, pexpect.EOF) as exc:
             logging.error(exc)
             await self.config_node()

@@ -1,0 +1,41 @@
+name: Test python scripts
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 3
+      fail-fast: false
+      matrix:
+        module:
+          - lndw22_doc/pythonlibs
+          - lndw22_doc/websniffer
+          - lndw22_doc/webterminal
+        python-version: ['3.10', '3.9', '3.8', '3.7']
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        cache: pip
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install tox
+    - name: Test ${{ matrix.module }} scripts
+      run: |
+        cd ${{ matrix.module }}
+        pyenv="py$(echo "${{ matrix.python-version }}" | tr -d '.')"
+        toxenvs="lint,flake8,black,${pyenv}-test"
+        tox -e ${toxenvs}

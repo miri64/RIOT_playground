@@ -143,7 +143,7 @@ def make_app(ctrl, userctx, server_addr=None):
     )
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("application")
     parser.add_argument("-b", "--board", type=str, nargs="?")
@@ -179,3 +179,7 @@ if __name__ == "__main__":
                 tornado.ioloop.IOLoop.current().start()
         finally:
             del ctrl
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

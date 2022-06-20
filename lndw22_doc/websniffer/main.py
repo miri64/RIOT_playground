@@ -189,13 +189,9 @@ def main():
         sniffer.start()
         app = make_app(out.name)
         app.settings["template_path"] = os.path.join(
-            os.path.dirname(__file__),
-            "templates"
+            os.path.dirname(__file__), "templates"
         )
-        app.settings["locale_path"] = os.path.join(
-            os.path.dirname(__file__),
-            "locales"
-        )
+        app.settings["locale_path"] = os.path.join(os.path.dirname(__file__), "locales")
         app.listen(8889)
         tornado.ioloop.IOLoop.current().start()
 

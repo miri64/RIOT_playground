@@ -306,7 +306,7 @@ ws.onmessage = function (evt) {
       color = "success";
       direction = (pkg.coap.code & (0x7 << 5)) ? "&#8592;" : "&#8594;"
       image = "{{ static_url("img/Smiley_devil_sad.svg") }}"
-      shake_opts = {direction: "left", queue: false, times: 2, duration: 1000};
+      shake_opts = {direction: "left", queue: false, times: 3, duration: 500};
 
       if (pkg.coap.code == 0x02) {
         data = "CoAP POST for ??? &#x1f512;"
@@ -351,7 +351,7 @@ ws.onmessage = function (evt) {
     );
     pkt_dom.appendTo(source);
     pkt_dom.animate({left: "+=" + (end - start) + "px"}, {
-      duration: 200,
+      duration: 1000,
       queue: false,
       start: function() {
         $(this).show();

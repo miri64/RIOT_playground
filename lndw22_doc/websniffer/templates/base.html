@@ -41,6 +41,13 @@
       td.oscore-field {
         background-color: #b2df8a;
       }
+      .blurry-text {
+	color: transparent;
+        text-shadow: 0 0 0.55em rgba(0,0,0,1);
+      }
+      .text-success .blurry-text {
+        text-shadow: 0 0 0.55em rgb(25, 135, 84);
+      }
     </style>
   </head>
   <body>
@@ -185,8 +192,8 @@ function dns_hdr(pkg) {
 
 function dns_qd(pkg) {
   return "<tr>" +
-      "<td class=\"pkg-field dns-field\" colspan=\"32\">Name: " +
-        hex2a(pkg.dns.qd.dns_question_record.qname) + "</td>" +
+        "<td class=\"pkg-field dns-field\" colspan=\"32\">Name: <strong>" +
+	hex2a(pkg.dns.qd.dns_question_record.qname) + "</strong></td>" +
     "</tr>" +
     "<tr>" +
       "<td class=\"pkg-field dns-field\" colspan=\"16\">Type: " +
@@ -201,8 +208,8 @@ function dns_qd(pkg) {
 
 function dns_an(pkg) {
   return "<tr>" +
-      "<td class=\"pkg-field dns-field\" colspan=\"32\">Name: " +
-        hex2a(pkg.dns.an.dns_resource_record.rrname) + "</td>" +
+    "<td class=\"pkg-field dns-field\" colspan=\"32\">Name: <strong>" +
+      hex2a(pkg.dns.an.dns_resource_record.rrname) + "</strong></td>" +
     "</tr>" +
     "<tr>" +
       "<td class=\"pkg-field dns-field\" colspan=\"16\">Type: " +
@@ -217,7 +224,7 @@ function dns_an(pkg) {
       "<td class=\"pkg-field dns-field\" colspan=\"32\">TTL: " + pkg.dns.an.dns_resource_record.ttl + "</td>" +
     "</tr>" +
     "<tr>" +
-      "<td class=\"pkg-field dns-field\" colspan=\"32\">RData: " + pkg.dns.an.dns_resource_record.rdata + "</td>" +
+      "<td class=\"pkg-field dns-field\" colspan=\"32\">RData: <strong>" + pkg.dns.an.dns_resource_record.rdata + "</strong></td>" +
     "</tr>";
 }
 
@@ -237,10 +244,21 @@ function coap_hdr(pkg) {
   "</tr>";
 }
 
+function truncated_payload(pkg, num) {
+  var load = pkg.raw.load;
+  if (!load) {
+    return "";
+  }
+  if (load.length <= num) {
+    return load; 
+  }
+  return load.slice(0, num) + "Xx".charAt((Math.random() * 1000000000000) % 2);
+}
+
 function oscore_hdr(pkg) {
   return "<tr>" +
-    "<td class=\"pkg-field oscore-field\" colspan=\"32\" style=\"height: "
-      + (2 * Math.ceil(pkg.raw.load.length / 32 + 1)) + "em\">??? &#x1f512;</td>" +
+    "<td class=\"pkg-field oscore-field fs-2\" colspan=\"32\" style=\"height: "
+    + (1 * Math.ceil(pkg.raw.load.length / 32 + 1)) + "em\"><tt class=\"blurry-text\">" + truncated_payload(pkg, 18) + "</tt> &#x1f512;</td>" +
   "</tr>";
 }
 
@@ -282,7 +300,7 @@ ws.onmessage = function (evt) {
         var name = hex2a(pkg.dns.an.dns_resource_record.rrname).slice(0, -1);
         var answer = pkg.dns.an.dns_resource_record.rdata;
 
-        data = name + " {% trans %}ist{% endtrans %} <tt>" + answer + "</tt>";
+	data = "<strong>" + name + "</strong> {% trans %}ist{% endtrans %} <strong><tt>" + answer + "</tt></strong>";
         curr_pkg.append(
           "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
@@ -291,7 +309,7 @@ ws.onmessage = function (evt) {
       else if(pkg.dns.qd) {
         var name = hex2a(pkg.dns.qd.dns_question_record.qname).slice(0, -1);
 
-        data = "{% trans %}Wer ist {% endtrans %} " + name + "?";
+	data = "{% trans %}Wer ist <strong>{% endtrans %} " + name + "</strong>?";
         curr_pkg.empty();
         curr_pkg.append(
           "<div class=\"col-6\">" +
@@ -309,7 +327,7 @@ ws.onmessage = function (evt) {
       shake_opts = {direction: "left", queue: false, times: 3, duration: 500};
 
       if (pkg.coap.code == 0x02) {
-        data = "CoAP POST for ??? &#x1f512;"
+        data = "CoAP POST for <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
         curr_pkg.empty();
         curr_pkg.append(
           "<div class=\"col-6\">" +
@@ -317,7 +335,7 @@ ws.onmessage = function (evt) {
           oscore_hdr(pkg) + "</table></div>")
       }
       else if (pkg.coap.code == 68) {
-        data = "CoAP 2.04 Changed ??? &#x1f512;"
+        data = "CoAP 2.04 Changed <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
         curr_pkg.append(
           "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
@@ -343,9 +361,9 @@ ws.onmessage = function (evt) {
       row.remove()
     }
     $("#table-header").html("Last " + $("#table tr").length + " messages");
-    var source = $(roles[pkg.wpan_data.src_addr]);
+    var source = $(roles[pkg.wpan_data.src_addr] || "#eavesdropper");
     var start = source.offset().left;
-    var end = $(roles[pkg.wpan_data.dest_addr]).offset().left;
+    var end = $(roles[pkg.wpan_data.dest_addr] || "#eavesdropper").offset().left;
     var pkt_dom = $(
       "<img class=\"transmit-pkg\" src=\"{{ static_url("img/envelope.svg") }}\" width=\"20%\">"
     );

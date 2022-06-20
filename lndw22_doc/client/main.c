@@ -22,6 +22,7 @@
 
 #include "event/thread.h"
 #include "fmt.h"
+#include "led.h"
 #include "net/af.h"
 #include "net/coap.h"
 #include "net/credman.h"
@@ -578,11 +579,23 @@ static const shell_command_t _shell_commands[] = {
 static void _gpio_irq(void *arg)
 {
     event_post(EVENT_PRIO_MEDIUM, arg);
+    if (gpio_read(SWITCH_GPIO)) {
+        LED0_OFF;
+    }
+    else {
+        LED0_ON;
+    }
 }
 
 int main(void)
 {
     gpio_init_int(SWITCH_GPIO, GPIO_IN_PU, GPIO_BOTH, _gpio_irq, &_check_switch_event);
+    if (gpio_read(SWITCH_GPIO)) {
+        LED0_OFF;
+    }
+    else {
+        LED0_ON;
+    }
     shell_run(_shell_commands, line_buf, sizeof(line_buf));
     return 0;
 }

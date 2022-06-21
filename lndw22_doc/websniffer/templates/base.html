@@ -62,6 +62,7 @@
 
         {% block nav %}
         <ul class="nav nav-pills">
+          <li class="nav-item"><a href="#" class="nav-link" id="empty-log">&#x1f5d1;</a></li>
         </ul>
         {% endblock nav %}
       </header>
@@ -100,7 +101,7 @@
         <div class="row">
           <div class="col">
             <h3 id="table-header">Last messages</h3>
-            <table id="table" class="table table-responsive table-sm">
+            <table class="table table-responsive table-sm">
               <thead>
                 <tr>
                   <th scope="col" class="text-end">Time</th>
@@ -119,6 +120,14 @@
     <script src="{{ static_url("js/bootstrap.bundle.min.js") }}"></script>
     <script>
 var ws = new WebSocket("ws://{{ host }}{{ sniffer_ws }}");
+
+$("#empty-log").click(function (evt) {
+  evt.preventDefault();
+    $.post({url: "/empty", success: function () {
+      $("#table").html("");
+      $("#table-header").html("Last messages");
+    }});
+});
 
 function hex2a(hex) {
   /* https://stackoverflow.com/a/13698172 */

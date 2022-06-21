@@ -158,10 +158,20 @@ class MainHandler(tornado_jinja2.BaseTemplateHandler):
         return self.render2("base.html", **data)
 
 
+class EmptyPktfile(tornado_jinja2.BaseTemplateHandler):
+    def initialize(self, pktfile_name):
+        self.pktfile_name = pktfile_name
+
+    def post(self):
+        with open(self.pktfile_name, "w") as pktfile:
+            pktfile.truncate(0)
+
+
 def make_app(pktfile):
     return tornado.web.Application(
         [
             (r"/", MainHandler),
+            (r"/empty", EmptyPktfile, {"pktfile_name": pktfile}),
             (r"/sniffer-ws", PktWebsocket, {"pktfile_name": pktfile}),
         ],
         static_path=os.path.join(os.path.dirname(__file__), "static"),

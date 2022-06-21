@@ -294,13 +294,13 @@ ws.onmessage = function (evt) {
       color = "danger";
       direction = (pkg.dns.qr) ? "&#8592;" : "&#8594;";
       image = "{{ static_url("img/Smiley_devil_grin.svg") }}"
-      shake_opts = {direction: "up", queue: false, duration: 500};
 
+      shake_opts = {direction: "up", queue: false, duration: 500};
       if (pkg.dns.qr && pkg.dns.an) {
         var name = hex2a(pkg.dns.an.dns_resource_record.rrname).slice(0, -1);
         var answer = pkg.dns.an.dns_resource_record.rdata;
 
-	data = "<strong>" + name + "</strong> {% trans %}ist{% endtrans %} <strong><tt>" + answer + "</tt></strong>";
+        data = "<strong>" + name + "</strong> {% trans %}ist{% endtrans %} <strong><tt>" + answer + "</tt></strong>";
         curr_pkg.append(
           "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
@@ -324,7 +324,7 @@ ws.onmessage = function (evt) {
       color = "success";
       direction = (pkg.coap.code & (0x7 << 5)) ? "&#8592;" : "&#8594;"
       image = "{{ static_url("img/Smiley_devil_sad.svg") }}"
-      shake_opts = {direction: "left", queue: false, times: 3, duration: 500};
+      shake_opts = {direction: "left", queue: false, times: 3, duration: 800};
 
       if (pkg.coap.code == 0x02) {
         data = "CoAP POST for <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
@@ -367,6 +367,8 @@ ws.onmessage = function (evt) {
     var pkt_dom = $(
       "<img class=\"transmit-pkg\" src=\"{{ static_url("img/envelope.svg") }}\" width=\"20%\">"
     );
+    var eavesdropper = $("#eavesdropper");
+    var eavesdropper_guess = $("#eavesdropper-guess")
     pkt_dom.appendTo(source);
     pkt_dom.animate({left: "+=" + (end - start) + "px"}, {
       duration: 1000,
@@ -377,7 +379,9 @@ ws.onmessage = function (evt) {
       complete: function () {
         $(this).remove();
         $("#eavesdropper").show().attr("src", image);
-        $("#eavesdropper").effect("shake", shake_opts);
+        if (shake_opts) {
+          $("#eavesdropper").effect("shake", shake_opts);
+        }
         $("#eavesdropper-guess").html(data);
         $("#eavesdropper-guess").attr("class", "h3 text-center text-" + color);
       }

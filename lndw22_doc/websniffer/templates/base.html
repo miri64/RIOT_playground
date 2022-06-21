@@ -84,7 +84,7 @@
                 </div>
               </div>
               <div class="col-4 text-center">
-                <img id="eavesdropper" src="{{ static_url("img/Smiley_devil_sad.svg") }}" class="img-responsive display-none" height="150" />
+                <img id="eavesdropper" src="{{ static_url("img/Smiley_devil_sad.svg") }}" class="img-responsive" height="150" />
               </div>
               <div class="col-4 text-center">
                 <div id="server" style="position: relative;">
@@ -293,7 +293,6 @@ ws.onmessage = function (evt) {
     var curr_pkg_empty = false;
     var curr_pkg = $("#curr-pkg");
     var curr_pkg_content;
-    var shake_opts;
     var roles = {
       1166689614019800: "#client",
       1166689614016130: "#server",
@@ -305,24 +304,23 @@ ws.onmessage = function (evt) {
       direction = (pkg.dns.qr) ? "&#8592;" : "&#8594;";
       image = "{{ static_url("img/Smiley_devil_grin.svg") }}"
 
-      shake_opts = {direction: "up", queue: false, duration: 500};
       if (pkg.dns.qr && pkg.dns.an) {
         var name = hex2a(pkg.dns.an.dns_resource_record.rrname).slice(0, -1);
         var answer = pkg.dns.an.dns_resource_record.rdata;
 
         data = "<strong>" + name + "</strong> {% trans %}ist{% endtrans %} <strong><tt>" + answer + "</tt></strong>";
-        curr_pkg_content = "<div class=\"col-6\">" +
+        curr_pkg_content = $("<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
-          dns_qd(pkg) + dns_an(pkg) + "</table></div>"
+          dns_qd(pkg) + dns_an(pkg) + "</table></div>");
       }
       else if(pkg.dns.qd) {
         var name = hex2a(pkg.dns.qd.dns_question_record.qname).slice(0, -1);
 
         data = "{% trans %}Wer ist <strong>{% endtrans %} " + name + "</strong>?";
         curr_pkg_empty = true;
-        curr_pkg_content = "<div class=\"col-6\">" +
+        curr_pkg_content = $("<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
-          dns_qd(pkg) + "</table></div>";
+          dns_qd(pkg) + "</table></div>");
       }
       else {
         return;
@@ -332,26 +330,24 @@ ws.onmessage = function (evt) {
       color = "success";
       direction = (pkg.coap.code & (0x7 << 5)) ? "&#8592;" : "&#8594;"
       image = "{{ static_url("img/Smiley_devil_sad.svg") }}"
-      shake_opts = {direction: "left", queue: false, times: 3, duration: 800};
 
       if (pkg.coap.code == 0x02) {
-        data = "CoAP POST for <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
+        data = "CoAP POST for <span class=\"blurry-text\">" + truncated_payload(pkg, 46) + "</span> &#x1f512;"
         curr_pkg_empty = true;
-        curr_pkg_content = "<div class=\"col-6\">" +
+        curr_pkg_content = $("<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
-          oscore_hdr(pkg) + "</table></div>";
+          oscore_hdr(pkg) + "</table></div>");
       }
       else if (pkg.coap.code == 68) {
         data = "CoAP 2.04 Changed <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
-        curr_pkg_content = "<div class=\"col-6\">" +
+        curr_pkg_content = $("<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
-          oscore_hdr(pkg) + "</table></div>";
+          oscore_hdr(pkg) + "</table></div>");
       }
     }
     else {
       return;
     }
-    $("#table-header").html("Last " + $("#table tr").length + " messages");
     var source = $(roles[pkg.wpan_data.src_addr] || "#eavesdropper");
     var start = source.offset().left;
     var drain = $(roles[pkg.wpan_data.dest_addr] || "#eavesdropper");
@@ -361,28 +357,27 @@ ws.onmessage = function (evt) {
     );
     var eavesdropper = $("#eavesdropper");
     var eavesdropper_guess = $("#eavesdropper-guess")
+    var list_entry = $(
+      "<tr class=\"table-" + color + "\"><td class=\"text-end\" style=\"width: 8em\"><tt>" +
+      ('0' + time.getHours()).slice(-2) + ":" +
+      ('0' + time.getMinutes()).slice(-2) + ":" +
+      ('0' + time.getSeconds()).slice(-2) + "." +
+      ('00' + time.getMilliseconds()).slice(-3) +
+      "</tt></td><td class=\"text-center\" style=\"width: 2em\">" + direction +
+      "</td><td>" + data + "</td>" +
+      "</tr>"
+    );
     pkt_dom.appendTo(source);
     function eavesdropper_change() {
       if (curr_pkg_empty) {
         curr_pkg.empty();
       }
-      curr_pkg.append(curr_pkg_content);
-      $("#eavesdropper").show().attr("src", image);
-      if (shake_opts) {
-        $("#eavesdropper").effect("shake", shake_opts);
-      }
+      curr_pkg_content.appendTo(curr_pkg);
+      $("#eavesdropper").attr("src", image);
       $("#eavesdropper-guess").html(data);
       $("#eavesdropper-guess").attr("class", "h3 text-center text-" + color);
-      $(
-        "<tr class=\"table-" + color + "\"><td class=\"text-end\" style=\"width: 8em\"><tt>" +
-        ('0' + time.getHours()).slice(-2) + ":" +
-        ('0' + time.getMinutes()).slice(-2) + ":" +
-        ('0' + time.getSeconds()).slice(-2) + "." +
-        ('00' + time.getMilliseconds()).slice(-3) +
-        "</tt></td><td class=\"text-center\" style=\"width: 2em\">" + direction +
-        "</td><td>" + data + "</td>" +
-        "</tr>"
-      ).prependTo("#table");
+      list_entry.prependTo("#table");
+      $("#table-header").html("Last " + $("#table tr").length + " messages");
       while (!$("#table tr").last().isInViewport()) {
         var row = $("#table tr").last()
         row;
@@ -390,30 +385,32 @@ ws.onmessage = function (evt) {
       }
     }
     pkt_dom.animate({left: "+=" + ((end - start) / 2) + "px", top: "-=70px"}, {
-      duration: 500,
+      duration: 200,
       queue: false,
       specialEasing: {top: "easeOutQuad", left: "easeInQuad"},
       start: function() {
         $(this).show();
       },
       complete: function () {
-        if (drain.attr("id") != "eavesdropper") {
-          eavesdropper_change();
-        }
         $(this).animate({left: "+=" + ((end - start) / 2) + "px", top: "+=70px"}, {
-          duration: 500,
+          duration: 200,
           queue: false,
           specialEasing: {top: "easeInQuad", left: "easeOutQuad"},
           start: function() {
             $(this).show();
           },
           complete: function () {
-            $(this).remove();
             if (drain.attr("id") == "eavesdropper") {
               eavesdropper_change();
             }
+	    setTimeout(function () {
+              pkt_dom.remove();
+            }, 200);
           }
         })
+        if (drain.attr("id") != "eavesdropper") {
+          eavesdropper_change();
+        }
       }
     });
   }

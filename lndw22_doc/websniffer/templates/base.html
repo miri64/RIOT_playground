@@ -103,7 +103,7 @@
             <table id="table" class="table table-responsive table-sm">
               <thead>
                 <tr>
-                  <th scope="col">Time</th>
+                  <th scope="col" class="text-end">Time</th>
                   <th scope="col"></th>
                   <th scope="col">Message</th>
                 </tr>
@@ -281,7 +281,9 @@ ws.onmessage = function (evt) {
     var color;
     var direction;
     var image;
+    var curr_pkg_empty = false;
     var curr_pkg = $("#curr-pkg");
+    var curr_pkg_content;
     var shake_opts;
     var roles = {
       1166689614019800: "#client",
@@ -300,20 +302,18 @@ ws.onmessage = function (evt) {
         var answer = pkg.dns.an.dns_resource_record.rdata;
 
         data = "<strong>" + name + "</strong> {% trans %}ist{% endtrans %} <strong><tt>" + answer + "</tt></strong>";
-        curr_pkg.append(
-          "<div class=\"col-6\">" +
+        curr_pkg_content = "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
-          dns_qd(pkg) + dns_an(pkg) + "</table></div>")
+          dns_qd(pkg) + dns_an(pkg) + "</table></div>"
       }
       else if(pkg.dns.qd) {
         var name = hex2a(pkg.dns.qd.dns_question_record.qname).slice(0, -1);
 
-	data = "{% trans %}Wer ist <strong>{% endtrans %} " + name + "</strong>?";
-        curr_pkg.empty();
-        curr_pkg.append(
-          "<div class=\"col-6\">" +
+        data = "{% trans %}Wer ist <strong>{% endtrans %} " + name + "</strong>?";
+        curr_pkg_empty = true;
+        curr_pkg_content = "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + dns_hdr(pkg) +
-          dns_qd(pkg) + "</table></div>")
+          dns_qd(pkg) + "</table></div>";
       }
       else {
         return;
@@ -327,62 +327,84 @@ ws.onmessage = function (evt) {
 
       if (pkg.coap.code == 0x02) {
         data = "CoAP POST for <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
-        curr_pkg.empty();
-        curr_pkg.append(
-          "<div class=\"col-6\">" +
+        curr_pkg_empty = true;
+        curr_pkg_content = "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
-          oscore_hdr(pkg) + "</table></div>")
+          oscore_hdr(pkg) + "</table></div>";
       }
       else if (pkg.coap.code == 68) {
         data = "CoAP 2.04 Changed <span class=\"blurry-text\">" + truncated_payload(pkg, 48) + "</span> &#x1f512;"
-        curr_pkg.append(
-          "<div class=\"col-6\">" +
+        curr_pkg_content = "<div class=\"col-6\">" +
           "<table class=\"table-responsive w-100\">" + pkt_head() + ipv6_hdr(pkg) + udp_hdr(pkg) + coap_hdr(pkg) +
-          oscore_hdr(pkg) + "</table></div>")
+          oscore_hdr(pkg) + "</table></div>";
       }
     }
     else {
       return;
     }
-    $(
-      "<tr class=\"table-" + color + "\" style=\"display: none;\"><td>" +
-      ('0' + time.getHours()).slice(-2) + ":" +
-      ('0' + time.getMinutes()).slice(-2) + ":" +
-      ('0' + time.getSeconds()).slice(-2) + "." +
-      ('00' + time.getMilliseconds()).slice(-3) +
-      "</td><td>" + direction +
-      "</td><td>" + data + "</td>" +
-      "</tr>"
-    ).prependTo("#table").slideDown(1000000);
-    while (!$("#table tr").last().isInViewport()) {
-      var row = $("#table tr").last()
-      row.slideUp(1000000);
-      row.remove()
-    }
     $("#table-header").html("Last " + $("#table tr").length + " messages");
     var source = $(roles[pkg.wpan_data.src_addr] || "#eavesdropper");
     var start = source.offset().left;
-    var end = $(roles[pkg.wpan_data.dest_addr] || "#eavesdropper").offset().left;
+    var drain = $(roles[pkg.wpan_data.dest_addr] || "#eavesdropper");
+    var end = drain.offset().left;
     var pkt_dom = $(
       "<img class=\"transmit-pkg\" src=\"{{ static_url("img/envelope.svg") }}\" width=\"20%\">"
     );
     var eavesdropper = $("#eavesdropper");
     var eavesdropper_guess = $("#eavesdropper-guess")
     pkt_dom.appendTo(source);
-    pkt_dom.animate({left: "+=" + (end - start) + "px"}, {
-      duration: 1000,
+    function eavesdropper_change() {
+      if (curr_pkg_empty) {
+        curr_pkg.empty();
+      }
+      curr_pkg.append(curr_pkg_content);
+      $("#eavesdropper").show().attr("src", image);
+      if (shake_opts) {
+        $("#eavesdropper").effect("shake", shake_opts);
+      }
+      $("#eavesdropper-guess").html(data);
+      $("#eavesdropper-guess").attr("class", "h3 text-center text-" + color);
+      $(
+        "<tr class=\"table-" + color + "\"><td class=\"text-end\" style=\"width: 8em\"><tt>" +
+        ('0' + time.getHours()).slice(-2) + ":" +
+        ('0' + time.getMinutes()).slice(-2) + ":" +
+        ('0' + time.getSeconds()).slice(-2) + "." +
+        ('00' + time.getMilliseconds()).slice(-3) +
+        "</tt></td><td class=\"text-center\" style=\"width: 2em\">" + direction +
+        "</td><td>" + data + "</td>" +
+        "</tr>"
+      ).prependTo("#table");
+      while (!$("#table tr").last().isInViewport()) {
+        var row = $("#table tr").last()
+        row;
+        row.remove()
+      }
+    }
+    pkt_dom.animate({left: "+=" + ((end - start) / 2) + "px", top: "-=70px"}, {
+      duration: 500,
       queue: false,
+      specialEasing: {top: "easeOutQuad", left: "easeInQuad"},
       start: function() {
         $(this).show();
       },
       complete: function () {
-        $(this).remove();
-        $("#eavesdropper").show().attr("src", image);
-        if (shake_opts) {
-          $("#eavesdropper").effect("shake", shake_opts);
+        if (drain.attr("id") != "eavesdropper") {
+          eavesdropper_change();
         }
-        $("#eavesdropper-guess").html(data);
-        $("#eavesdropper-guess").attr("class", "h3 text-center text-" + color);
+        $(this).animate({left: "+=" + ((end - start) / 2) + "px", top: "+=70px"}, {
+          duration: 500,
+          queue: false,
+          specialEasing: {top: "easeInQuad", left: "easeOutQuad"},
+          start: function() {
+            $(this).show();
+          },
+          complete: function () {
+            $(this).remove();
+            if (drain.attr("id") == "eavesdropper") {
+              eavesdropper_change();
+            }
+          }
+        })
       }
     });
   }

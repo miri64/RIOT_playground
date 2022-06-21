@@ -289,7 +289,6 @@ ws.onmessage = function (evt) {
       16023930777278048000: "#server",
     }
 
-    console.log(pkg);
     if ("dns" in pkg) {
       color = "danger";
       direction = (pkg.dns.qr) ? "&#8592;" : "&#8594;";

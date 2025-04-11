@@ -4,6 +4,10 @@
 
 [255a5cd]: https://github.com/RIOT-OS/RIOT/commit/255a5cd0a60aef51fc20c7fa2c3aefca24348184
 
+# Alternative versions
+
+- **A (private) netd version with poster etc.:** https://github.com/netd-tud/dino-demo
+
 # Config
 
 - Channel: `DEFAULT_CHANNEL=19`

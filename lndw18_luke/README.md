@@ -6,6 +6,7 @@
 
 # Alternative versions
 
+- **LCN'19 artifact repo:** https://github.com/5G-I3/coap-rd-config-demo
 - **A (private) netd version with poster etc.:** https://github.com/netd-tud/dino-demo
 
 # Config
